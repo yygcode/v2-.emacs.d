@@ -165,7 +165,7 @@
 ;; https://github.com/quelpa/quelpa-use-package
 (use-package quelpa-use-package
   :pin melpa
-  :config
+  :init
   (require 'quelpa-use-package)
   ;; I set use-package-always-ensure, so need advice here
   ;; https://github.com/quelpa/quelpa-use-package#overriding-use-package-always-ensure
