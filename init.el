@@ -51,7 +51,7 @@
 (setq gc-cons-threshold (* 32 1024 1024))
 
 ;; Define as early as possible.
-(defvar user-init-config (expand-file-name "config.org" user-emacs-directory)
+(defconst user-init-config (expand-file-name "config.org" user-emacs-directory)
   "File name, including directory, of initialization file by org-babel.")
 
 ;;; My Helper/Common routine
@@ -195,9 +195,12 @@
 ;; but org-plus-contrib is not installed default, so I think I can force install
 ;; org by routine package-install but failed.
 (use-package org
-    :pin org)
+  :pin org
+  :init
+  (setq org-support-shift-select t)
+  (setq org-src-fontify-natively t))
 (use-package org-plus-contrib
-    :pin org)
+  :pin org)
 
 ;; load literate config.
 (when (file-exists-p user-init-config)

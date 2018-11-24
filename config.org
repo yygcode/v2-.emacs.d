@@ -1,0 +1,568 @@
+#+TITLE: Emacs Literate Configuration
+#+AUTHOR: yonggang.yyg
+#+EMAIL: yygcode@gmail.com
+#+DATE: 2017-12-20
+
+* Preamble
+** First startup time
+When first start, the config installs a number of packages from melpa(or mirror)
+and github, which can take a long time depending on the speed of the network.
+
+** Document structure
+The structure of this document is described as follows:
+
+- Preamble ::
+Document self-structure description and simple error handling.
+
+- Introduction ::
+Introduce Emacs, Orgmode and some related materials indexes.
+
+- Header ::
+The source file header to satisify the source format of elisp area conventions.
+
+- Profiler ::
+Sometimes emacs start slowly, use here methods to analysis.
+
+- Convenient ::
+Create a convenient configuration environment like as open config, reload
+config, switch to other window.
+
+- Footer ::
+Like as header, it's the footer of source format of elisp area conventions.
+
+- Appendix ::
+Supplementary contents.
+
+** Error handling
+- Remove package if install some-package failed. e.g. esup package:
+  rm ~/.emacs.d/elpa/esup* -fr
+
+- Refresh archive contents manual after start emacs, then restart emacs:
+  M-x package-refresh-contents
+
+- Remove elpa directory all, then restart emacs:
+  rm ~/.emacs.d/elpa -fr
+
+- Send me a mail to get help: yygcode@gmail.com, cppgp@qq.com
+
+* Introduction
+** What is Emacs
+*[[https://en.wikipedia.org/wiki/Emacs][Emacs]]* /ˈiːmæks/ is a family of text editors that are characterized by their
+extensibility. [[https://www.gnu.org/software/emacs/][GNU Emacs]] is the most popular and portable emacs implementation.
+
+*[[http://orgmode.org/][Org mode]]* is a [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Major-Modes.html][major mode]] of emacs. It is for keeping notes, capturing ideas,
+maintaining TODO lists, planning projects, and authoring documents with a fast
+and effective plain-text system. It's also for rich exporting, html publishing,
+literal programming, and reproducible research, etc..
+
+This configuration is organzied with org mode literal programming, used to
+customize emacs deeply for engineers. The goal is to improve the productivity
+and comfort.
+
+This configuration is tested under GNU Emacs 26.0.90, the version details is:
+=GNU Emacs 26.0.90 (build 3, x86_64-w64-mingw32) of 2017-10-14=.
+
+Update to 26.1:
+=GNU Emacs 26.1 (build 1, x86_64-pc-linux-gnu, GTK+ Version 3.22.11) of 2018-10-25=
+
+You can download the configuration from GitHub freely:
+#+BEGIN_SRC shell
+~$ cd $HOME
+~$ git clone https://github.com/yygcode/.emacs.d.git
+#+END_SRC
+
+** What is Orgmode and orgmode babel
+[[https://orgmode.org/][Org mode]] is for keeping notes, maintaining TODO lists, planning projects, and
+authoring documents with a fast and effective plain-text system.
+
+- Orgmode manual: https://orgmode.org/manual/index.html
+- Babel manual: https://orgmode.org/manual/Working-with-source-code.html#Working-with-source-code
+- Org contrib: https://orgmode.org/worg/org-contrib/babel/
+
+** Reference Configuration
+Many execllent configurations are referenced during customization. Follows are
+index for typical configurations:
+- Purcell: https://github.com/purcell/emacs.d
+- Prelude: https://github.com/bbatsov/prelude
+- Spacemacs: https://github.com/syl20bnr/spacemacs
+- Zilongshanren: https://github.com/zilongshanren/spacemacs-private
+- Chenbin: https://github.com/redguardtoo/emacs.d
+
+** Emacs learning material
+[[https://github.com/emacs-china/Spacemacs-rocks][Emacs-Rocks]] made by zilongshanren(子龙山人) helped me a lot:
+- Space-Rocks: https://github.com/emacs-china/Spacemacs-rocks
+- Homepage: https://zilongshanren.com/
+
+I don't agree with some of Chenbin(陈斌)'s views. e.g.: Do Not Learn Lisp.
+- https://github.com/redguardtoo/mastering-emacs-in-one-year-guide
+- Blog: http://blog.binchen.org/index.html
+
+I read eintr and some part of elisp. These information are very helpful:
+- eintr: *An Introduction to Programming in Emacs Lisp*
+  + html: https://www.gnu.org/software/emacs/manual/eintr.html
+  + pdf: https://www.gnu.org/software/emacs/manual/pdf/eintr.pdf
+- mlisp: *GNU Emacs Lisp Reference Manual*
+  + html: https://www.gnu.org/software/emacs/manual/html_node/elisp/
+  + pdf: https://www.gnu.org/software/emacs/manual/pdf/elisp.pdf
+- manual: *GNU Emacs manual*
+  + html: https://www.gnu.org/software/emacs/manual/emacs.html
+  + pdf: https://www.gnu.org/software/emacs/manual/pdf/emacs.pdf
+
+** Emacs internal material
+- =C-h ?= Get help list
+- =C-h i= info
+- =C-h t= tutorial
+
+** Editor core requirements
+
+* Header
+  :PROPERTIES:
+  :CUSTOM_ID: header
+  :END:
+
+This section has no actual effect, you can remove this section safely. It's just
+used to generate some format code snippets to help auto-generated file config.el
+satisfing the elisp file format requirement. Refer to follow links:
+- CheckDoc: http://cedet.sourceforge.net/checkdoc.shtml
+- EmacsWiKi: https://www.emacswiki.org/emacs/ElispAreaConventions
+- Manual Simple Packages:
+https://www.gnu.org/software/emacs/manual/html_node/elisp/Simple-Packages.html
+#+BEGIN_SRC emacs-lisp
+  ;;; ~/.emacs.d/config.el --- Emacs Configuration File
+
+  ;; Copyright (C) 2017-2019 yanyg<yygcode@gmail.com>
+
+  ;; Author: yonggang.yyg<yygcode@gmail.com>
+  ;; Maintainer: yonggang.yyg<yygcode@gmail.com>
+  ;; Keyword: Emacs Customize Org Literate
+  ;; Homepage: https://ycode.org; http://ycode.org
+  ;; URL: http://github.com/yygcode/.emacs.d
+
+  ;; This program is free software; you can redistribute it and/or modify
+  ;; it under the terms of the GNU General Public License as published by
+  ;; the Free Software Foundation; either version 2 of the License, or
+  ;; (at your option) any later version.
+
+  ;; This program is distributed in the hope that it will be useful,
+  ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ;; GNU General Public License for more details.
+
+  ;; You should have received a copy of the GNU General Public License
+  ;; along with this program; see the file COPYING, if not see
+  ;; <http://www.gnu.org/licenses/>.
+
+  ;;; Commentary:
+
+  ;; This file is auto-generated with org-babel.  The source is config.org.
+  ;; DO NOT modify this file(~/.emacs.d/config.el) directly.
+  ;; Please modify source file ~/.emacs.d/config.org.
+
+  ;;; Code:
+
+  ;;; Header timestamp
+  (message "%s" (format-time-string "config.el begin %Y-%m-%d %H:%M:%S"
+                                    (current-time)))
+
+  ;;; declare variable defined in init.el to eliminate warnings.
+  (defvar user-init-config)
+
+  ;; to calculate init seconds
+  (defconst y/time-begin-seconds (float-time))
+#+END_SRC
+* Profiler
+** Wrapper function
+- y/profile-esup :: profiling by esup
+- y/profile-tabulated :: profiling table result
+- y/profile-tree :: profiling tree result
+
+Try execute above function for more details.
+
+** esup - startup profiler
+[[file:init.el][init.el]] only set package archive and org, then use org-babel load config.org
+to complete the rest(vast majority, main part) configurations. [[https://github.com/jschaf/esup][Esup]] provides
+=esup-child-profile-require-level= deep to profile require statement, but it
+can not deep to profile org-babel file. I write wrapper function =y/esup= to
+analyze config.org time proportion.
+
+- Esup GitHub: https://github.com/jschaf/esup
+- Emacs Manual Profiling:
+  https://www.gnu.org/software/emacs/manual/html_node/elisp/Profiling.html
+
+#+BEGIN_SRC emacs-lisp
+  ;; When call esup function, esup would start a new emacs process
+  ;; with option -L/-l to load esup, but until now init.el does not
+  ;; loaded, so we need load init.el first.
+  (when (and (package-installed-p 'esup)
+             (string= (getenv "EMACS_Y_INTERNAL_ESUP_PROFILER") "y/esup"))
+    ;; load user-init-file(init.el) if esup profiling enabled.
+    (message "y/esup: Esup profiling, load %s now" user-init-file)
+    (load-file user-init-file))
+
+  ;; Until now esup has a bug for format-time-string:
+  ;; https://github.com/jschaf/esup/issues/47
+  ;; https://github.com/jschaf/esup/commit/a589005a9a888537deef94d6fe38a9b8790c97c7
+  ;; so use quelpa download the latest one.
+  (use-package esup
+    :quelpa (esup :fetcher github :repo "jschaf/esup" :stable nil)
+    ;; :demand t ;; no delay
+    :init
+    (setq esup-child-profile-require-level 3)
+    (setq esup-user-init-file (expand-file-name "config.el"
+                                                user-emacs-directory))
+    )
+
+  ;; set env before esup, and clear env after esup
+  (advice-add 'esup :before
+              #'(lambda(&optional init-file)
+                  "y/esup: set env EMACS_Y_INTERNAL_ESUP_PROFILER."
+                  (setenv "EMACS_Y_INTERNAL_ESUP_PROFILER" "y/esup")))
+  (advice-add 'esup :after
+              #'(lambda(&optional init-file)
+                  "y/esup: clear env EMACS_Y_INTERNAL_ESUP_PROFILER."
+                  (setenv "EMACS_Y_INTERNAL_ESUP_PROFILER" nil)))
+
+  (defalias 'y/profile-esup 'esup
+    "Profiling emacs startup time.")
+#+END_SRC
+
+** benchmark - profile execution time
+*Notice* Import benchmark-init after package esup for esup enhancement.
+- GitHub: https://github.com/dholm/benchmark-init-el
+- Execute function in emacs to query result
+  + benchmark-init/show-durations-tree
+  + benchmark-init/show-durations-tabulated
+- Default disable data collection after init. Execute to enable or disbale:
+  + benchmark-init/activate
+  + benchmark-init/deactivate
+#+BEGIN_SRC emacs-lisp
+  (use-package benchmark-init
+    :init
+    (benchmark-init/activate)
+    :hook
+    ;; To disable collection of benchmark data after init is done.
+    (after-init . benchmark-init/deactivate))
+
+  (defalias 'y/profile-tabulated 'benchmark-init/show-durations-tabulated
+    "Profiling emacs startup time. Show result as a table.")
+  (defalias 'y/profile-tree 'benchmark-init/show-durations-tree
+    "Profiling emacs startup time. Show result as a tree.")
+#+END_SRC
+
+* Convenient
+** behavior
+- Always use y-or-n replace yes-or-no so you just need input y/n.
+- Do not backup files.
+- Always use space replace tab
+- Replace selection text after input
+- Adjust large file warning threshold to 256MB
+- Show line number for prog and text mode
+
+#+BEGIN_SRC emacs-lisp
+  (defalias 'yes-or-no-p 'y-or-n-p)
+
+  (setq-default make-backup-files nil)
+  (setq-default indent-tabs-mode nil)
+
+  (delete-selection-mode t)
+  (setq large-file-warning-threshold (* 256 1024 1024)) ;; 256MB
+  (setq default-directory "~/")
+
+  (use-package linum
+    :config
+    ;; set linum face for bug that text-scale-increase/decrease
+    ;; see https://unix.stackexchange.com/a/146781
+    (set-face-attribute 'linum nil :height 100)
+    :hook
+    (text-mode . linum-mode)
+    (prog-mode . linum-mode))
+#+END_SRC
+** company
+company is a text completion framework. It means COMplete ANYthing.
+Gitub https://github.com/company-mode/company-mode.
+
+The company configuration varies greatly for different major modes, and when
+use emacs, company config will always be adjusted or optimized. So the total
+configurations are complex and huge. If still use orgmode babel to maintain
+company config, the config will be scattered everywhere. Therefore, I put all
+company config in a special file y-init-company.el to enhance maintenance.
+
+#+BEGIN_SRC emacs-lisp
+  (require 'y-init-company)
+#+END_SRC
+
+** diminish
+Diminish minor modes information displayed on the mode line, saving valuable
+mode line space. See https://github.com/emacsmirror/diminish.
+
+#+BEGIN_SRC emacs-lisp
+  ;; (use-package diminish)
+  (require 'diminish)
+#+END_SRC
+
+** eldoc
+eldoc provides a minor mode to display of Lisp objects at point in echo area.
+#+BEGIN_SRC emacs-lisp
+  ;; builtin
+  (require 'eldoc)
+  (diminish 'eldoc-mode)
+  (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
+  (add-hook 'lisp-mode-hook 'eldoc-mode)
+  (add-hook 'lisp-interaction-mode-hook 'eldoc-mode)
+#+END_SRC
+
+** flycheck
+Flycheck is a modern on-the-fly syntax checking package. Homepage is
+https://www.flycheck.org/en/latest/.
+
+Flycheck use external specific system tool to check syntax. See
+https://www.flycheck.org/en/latest/languages.html#flycheck-languages,
+so need properly exec-path to search it. Install package exec-path-from-shell
+for mac compatiblity: https://github.com/purcell/exec-path-from-shell.
+
+#+BEGIN_SRC emacs-lisp
+  (when (memq window-system '(mac ns x))
+    (use-package exec-path-from-shell
+      :init
+      (exec-path-from-shell-initialize)))
+#+END_SRC
+
+Futher help:
+- =C-h f exec-path-from-shell-initialize=
+- =C-h f exec-path-from-shell-copy-env=
+
+Install flycheck and just config for elisp here. Reconfigure flycheck when
+configuring a development environment such as C/C++.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package flycheck
+    :diminish
+    :init
+    (setq flycheck-emacs-lisp-load-path 'inherit)
+    :hook
+    (after-init . global-flycheck-mode))
+#+END_SRC
+
+Read https://www.flycheck.org/en/latest/languages.html#emacs-lisp to get more
+details.
+
+Install flycheck-color-mode to enhance display.
+Github https://github.com/flycheck/flycheck-color-mode-line.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package flycheck-color-mode-line
+    :hook
+    (flycheck-mode . flycheck-color-mode-line-mode))
+#+END_SRC
+
+flycheck-pos-tip is a useful minor mode. Github
+https://github.com/flycheck/flycheck-pos-tip.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package flycheck-pos-tip
+    :config
+    (setq flycheck-pos-tip-timeout 120) ;; 2 mins
+    :hook
+    (flycheck-mode . flycheck-pos-tip-mode))
+#+END_SRC
+
+** hungry delete
+#+BEGIN_SRC emacs-lisp
+  (use-package hungry-delete
+    :hook
+    (after-init . global-hungry-delete-mode))
+#+END_SRC
+
+** key binding
+In the entire configuration enhancement, we need to frequently switch to scratch
+to debug some lisp sentences and switch to config file init.el/config.org. Now
+define 3 convenient key binding. Again, I use key-prefix "C-c q" for quick-.
+
+#+BEGIN_SRC emacs-lisp
+  (defun y/switch-buffer-scratch()
+    "Switch buffer to *scartch*."
+    (interactive)
+    (switch-to-buffer "*scratch*"))
+  (defun y/switch-buffer-init()
+    "Switch buffer to user-init-file(default init.el)."
+    (interactive)
+    (find-file user-init-file))
+  (defun y/switch-buffer-config()
+    "Switch buffer to user-init-config(default config.org)."
+    (interactive)
+    (find-file user-init-config))
+
+  (define-key global-map (kbd "C-c q s") #'y/switch-buffer-scratch)
+  (define-key global-map (kbd "C-c q i") #'y/switch-buffer-init)
+  (define-key global-map (kbd "C-c q c") #'y/switch-buffer-config)
+  (define-key global-map (kbd "C-o") #'other-window)
+#+END_SRC
+
+** smartparens
+Smartparens is a minor mode for dealing with pairs in Emacs.
+- Github: https://github.com/Fuco1/smartparens
+- Blog: https://ebzzry.io/en/emacs-pairs/
+- Wiki: https://github.com/Fuco1/smartparens/wiki
+- ref [[https://ebzzry.io/en/emacs-pairs/][emacs-pairs]], [[https://github.com/Fuco1/smartparens][smartparens github]], and [[https://github.com/Fuco1/smartparens/wiki][wiki]]
+
+#+BEGIN_SRC emacs-lisp
+  (use-package smartparens-config
+    :ensure smartparens
+    :diminish
+    :init
+    (setq sp-base-key-bindings 'paredit)
+    (setq sp-autoskip-closing-pair 'always)
+    (setq sp-hybrid-kill-entire-symbol nil)
+    (sp-use-paredit-bindings)
+    (show-smartparens-global-mode t)
+    ;; eliminate warning: ‘sp-local-pair’ might not be defined at runtime
+    (eval-when-compile
+      (sp-local-pair 'lisp-mode "'" nil :actions nil)
+      (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
+      (sp-local-pair 'lisp-interaction-mode "'" nil :actions nil)
+      (sp-local-pair 'lisp-mode "`" nil :actions nil)
+      (sp-local-pair 'emacs-lisp-mode "`" nil :actions nil)
+      (sp-local-pair 'lisp-interaction-mode "`" nil :actions nil))
+    :hook
+    (after-init . smartparens-global-mode)
+    (prog-mode . turn-on-smartparens-strict-mode))
+#+END_SRC
+
+** ui
+*** basic
+Set menu, scroll, fullscreen, cursor and column-number.
+Customize user interface
+#+BEGIN_SRC emacs-lisp
+  (setq-default
+   inhibit-splash-screen t
+   initial-scratch-message
+   (concat
+    ";; This buffer is for text that is not saved, and for Lisp evaluation.\n"
+    ";; To create a file, visit it with C-x C-f and enter text in its buffer.\n\n"
+    ";; Happy hacking " (or user-login-name "<yanyg>") " - Emacs loves you!\n\n"))
+
+  (defun y/frame-init-ui-basic(&optional frame)
+    "Init FRAME user-interface after created."
+    (message "Init frame: %s" frame)
+    (with-selected-frame frame
+      ;; Hide menu, tool, scroll bar, auto fullscreen for X
+      (menu-bar-mode -1)
+      (when (display-graphic-p)
+        (set-frame-parameter nil 'fullscreen 'fullboth)
+        (scroll-bar-mode -1))
+      (when (fboundp 'tool-bar-mode)
+        (tool-bar-mode -1))
+      ;; cursor: bar with width 3, OrangeRed color, Steady mode
+      (if (display-graphic-p)
+          (progn
+            (setq-default cursor-type '(bar . 3))
+            (blink-cursor-mode -1)
+            (set-cursor-color "OrangeRed"))
+        (progn
+          ;; Only support xterm.
+          ;; FIXME: restore after exit.
+          ;; need terminal support. 6 for steady bar
+          ;; \e: ESC; \a: BELL; man ascii for more details.
+          (send-string-to-terminal "\e[6 q\e]12;DarkOrange1\a")))
+
+      ;; disable bell
+      (setq visible-bell nil)
+      (setq ring-bell-function 'ignore)
+
+      ;; show column and size in the mode line
+      (column-number-mode)
+      (size-indication-mode t)))
+
+  ;; daemon hook, exec after emacsclient created
+  (add-hook 'after-make-frame-functions #'y/frame-init-ui-basic)
+
+  ;; non-daemon hook
+  (unless (daemonp)
+    (add-hook 'after-init-hook
+              #'(lambda() (y/frame-init-ui-basic (selected-frame)))))
+#+END_SRC
+
+*** TODO font
+Wait to be complete.
+
+*** theme
+Theme is another important ui aspect. Manual
+https://www.gnu.org/software/emacs/manual/html_node/emacs/Custom-Themes.html,
+https://www.gnu.org/software/emacs/manual/html_node/emacs/Creating-Custom-Themes.html
+and wiki https://www.emacswiki.org/emacs/CustomThemes introduce some theme
+knowledge.
+
+Emacsthemes(https://emacsthemes.com/) and
+Emacs Theme Gallary(https://pawelbx.github.io/emacs-theme-gallery/) lists
+typical emacs theme.
+
+Theme will gradually increase as time goes, put all liked theme package here
+and select zenburn as default.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package zenburn-theme)
+  (use-package monokai-theme)
+
+  (load-theme 'zenburn t)
+#+END_SRC
+
+** TODO whitespace visualization
+whitespace render a space, tabs, newlines to a visible glyph.
+- Github: https://github.com/emacs-mirror/emacs/blob/master/lisp/whitespace.el
+- builtin lisp, see [[https://github.com/emacs-mirror/emacs/blob/master/lisp/whitespace.el][GitHub whitespace.el]]
+- WIKI: https://www.emacswiki.org/emacs/WhiteSpace
+- Ergoemacs: http://ergoemacs.org/emacs/whitespace-mode.html
+
+#+BEGIN_SRC emacs-lisp
+  (defun y/whitespace-color(&optional theme)
+    "Set whitespace color depends on current theme THEME."
+    (custom-set-faces
+     '(whitespace-newline ((t (:foreground "#75715E"))))
+     ;; '(whitespace-newline ((t (:foreground "#424242"))))
+     '(whitespace-tab ((t (:foreground "#75715E"))))
+     '(whitespace-space ((t (:foreground "#75715E" :background nil))))))
+
+  (use-package whitespace
+    :diminish
+    :config
+    (progn
+      (setq whitespace-line-column 80) ;; limit line length
+      (setq whitespace-style '(face trailing spaces tabs lines-tail newline
+                                    space-before-tab space-before-tab::tab
+                                    space-before-tab::space space-after-tab::tab
+                                    space-after-tab::space space-after-tab
+                                    newline-mark space-mark tab-mark))
+      (setq whitespace-display-mappings
+            '((space-mark 32 [183] [46])
+              (newline-mark 10 [182 10])
+              (tab-mark 9 [?. 9] [92 9])))
+      (y/whitespace-color))
+    :hook
+    (prog-mode . whitespace-mode)
+    (text-mode . whitespace-mode)
+    (before-save . whitespace-cleanup))
+
+  ;; theme has no hook. use advice.
+#+END_SRC
+
+* Footer
+Refer to [[#header][header]] for more details.
+
+#+BEGIN_SRC emacs-lisp
+  ;; calculate finish seconds and print
+  (defconst y/time-finish-seconds (float-time))
+  (message "y/time-elapsed-time is %.3f seconds (file: %s)"
+           (- y/time-finish-seconds y/time-begin-seconds) user-init-config)
+
+  (unintern 'y/time-finish-seconds nil)
+  (unintern 'y/time-begin-seconds nil)
+
+  ;;; footer timestamp message
+  (message "%s" (format-time-string "config.el finish %Y-%m-%d %H:%M:%S"
+                                    (current-time)))
+
+  ;;; config.el ends here
+#+END_SRC
+
+* Appendix
+Blank now.
