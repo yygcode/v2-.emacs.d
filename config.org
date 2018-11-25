@@ -435,12 +435,13 @@ Github https://github.com/flycheck/flycheck-color-mode-line.
 flycheck-pos-tip is a useful minor mode. Github
 https://github.com/flycheck/flycheck-pos-tip.
 
+Disable pos-tip for performance
 #+BEGIN_SRC emacs-lisp
-  (use-package flycheck-pos-tip
-    :config
-    (setq flycheck-pos-tip-timeout 120) ;; 2 mins
-    :hook
-    (flycheck-mode . flycheck-pos-tip-mode))
+  ;; (use-package flycheck-pos-tip
+  ;;   :config
+  ;;   (setq flycheck-pos-tip-timeout 120) ;; 2 mins
+  ;;   :hook
+  ;;   (flycheck-mode . flycheck-pos-tip-mode))
 #+END_SRC
 
 ** hungry delete
@@ -534,7 +535,6 @@ Customize user interface
 
   (defun y/frame-init-ui-basic(&optional frame)
     "Init FRAME user-interface after created."
-    (message "Init frame: %s" frame)
     (with-selected-frame frame
       ;; Hide menu, tool, scroll bar, auto fullscreen for X
       (menu-bar-mode -1)
@@ -749,6 +749,10 @@ whitespace render a space, tabs, newlines to a visible glyph.
 - WIKI: https://www.emacswiki.org/emacs/WhiteSpace
 - Ergoemacs: http://ergoemacs.org/emacs/whitespace-mode.html
 
+TODO LIST:
+1. For linux style do not show tab before space;
+2. change color after theme changed;
+
 #+BEGIN_SRC emacs-lisp
   (defun y/whitespace-color(&optional theme)
     "Set whitespace color depends on current theme THEME."
@@ -782,6 +786,345 @@ whitespace render a space, tabs, newlines to a visible glyph.
 #+END_SRC
 
 * Major mode
+** common packages
+*** highlight-symbol
+- Homepage: [[https://github.com/nschum/highlight-symbol.el][GitHub]]
+#+BEGIN_SRC emacs-lisp
+  (use-package highlight-symbol
+    :diminish highlight-symbol-mode
+    :init
+    ;; The original func always print ugly string '<N> occurrences in buffer'
+    ;; Replace with dummy empty function
+    (setq highlight-symbol-occurrence-message nil)
+    (advice-add 'highlight-symbol-count :override #'(lambda() nil))
+    ;; (defun highlight-symbol-count (&optional symbol) (t))
+    :config
+    (setq highlight-symbol-idle-delay .1)
+    :bind
+    (([f8] . highlight-symbol-at-point)
+     ([S-f8] . highlight-regexp))
+    :hook
+    (prog-mode . highlight-symbol-mode))
+#+END_SRC
+*** highlight surrounding parenthesis
+#+BEGIN_SRC emacs-lisp
+  (use-package highlight-parentheses
+    :diminish highlight-parentheses-mode
+    :init
+    (add-hook 'prog-mode-hook 'highlight-parentheses-mode))
+#+END_SRC
+
+*** ggtags
+#+BEGIN_SRC emacs-lisp
+  (use-package ggtags
+    :diminish
+    :init
+    :bind
+    (:map ggtags-mode-map
+          ("C-c g s" . ggtags-find-other-symbol)
+          ("M-."     . ggtags-find-tag-dwim)
+          ("M-,"     . pop-tag-mark)
+          ("C-c g h" . ggtags-view-tag-history)
+          ("C-c g r" . ggtags-find-reference)
+          ("C-c g f" . ggtags-find-file)
+          ("C-c g c" . ggtags-create-tags)
+          ("C-c g u" . ggtags-update-tags))
+    :hook
+    (c-mode-common . ggtags-mode))
+#+END_SRC
+
+*** iedit
+- Homepage: [[https://github.com/victorhge/iedit][Github Iedit]]
+#+BEGIN_SRC emacs-lisp
+  (use-package iedit
+    :bind
+    (("C-c ;" . iedit-mode)))
+#+END_SRC
+
+*** stickfunc
+- HomePage: [[https://github.com/tuhdo/semantic-stickyfunc-enhance#features][GitHub StickFunc Enhance]]
+#+BEGIN_SRC emacs-lisp
+  ;; (use-package stickyfunc-enhance
+  ;;   :pin melpa
+  ;;   :diminish
+  ;;   :init
+  ;;   (add-to-list 'semantic-default-submodes 'global-semantic-stickyfunc-mode)
+  ;;   (semantic-mode 1))
+#+END_SRC
+
+*** yasnippet
+*YASnippet* is a template system for Emacs. It allows you to type an
+abbreviation and automatically expand it into function templates. Bundled
+language templates include: C, C++, C#, Perl, Python, Ruby, SQL, LaTeX,
+HTML, CSS and more.
+
+- Github: https://github.com/joaotavora/yasnippet
+
+#+BEGIN_SRC emacs-lisp
+  (use-package yasnippet
+    :diminish
+    :hook
+    (prog-mode . yas-minor-mode))
+
+  (use-package yasnippet-snippets)
+#+END_SRC
+
+** c mode
+*** style
+Use c-guess-no-install and c-guess-view to generate style template.
+
+#+BEGIN_SRC emacs-lisp
+  (defconst y/c-style-basic
+    '((c-tab-always-indent . nil)
+      (c-basic-offset . 4)
+      (c-offsets-alist
+       (block-close . 0)
+       (brace-list-close . 0)
+       (brace-list-entry . 0)
+       (brace-list-intro . +)
+       (class-close . 0)
+       (defun-block-intro . +)
+       (defun-close . 0)
+       (defun-open . 0)
+       (else-clause . 0)
+       (inclass . +)
+       (statement . 0)
+       (statement-block-intro . +)
+       (statement-cont . +)
+       (substatement . +)
+       (topmost-intro . 0)
+       (access-label . -)
+       (annotation-top-cont . 0)
+       (annotation-var-cont . +)
+       (arglist-close . c-lineup-close-paren)
+       (arglist-cont c-lineup-gcc-asm-reg 0)
+       (arglist-cont-nonempty . c-lineup-arglist)
+       (arglist-intro . c-lineup-arglist-intro-after-paren)
+       (block-open . 0)
+       (brace-entry-open . 0)
+       (brace-list-open . +)
+       (c . c-lineup-C-comments)
+       (case-label . 0)
+       (catch-clause . 0)
+       (class-open . 0)
+       (comment-intro . c-lineup-comment)
+       (composition-close . 0)
+       (composition-open . 0)
+       (cpp-define-intro c-lineup-cpp-define +)
+       (cpp-macro . -1000)
+       (cpp-macro-cont . +)
+       (do-while-closure . 0)
+       (extern-lang-close . 0)
+       (extern-lang-open . 0)
+       (friend . 0)
+       (func-decl-cont . +)
+       (incomposition . +)
+       (inexpr-class . +)
+       (inexpr-statement . +)
+       (inextern-lang . +)
+       (inher-cont . c-lineup-multi-inher)
+       (inher-intro . +)
+       (inlambda . c-lineup-inexpr-block)
+       (inline-close . 0)
+       (inline-open . 0)
+       (inmodule . +)
+       (innamespace . +)
+       (knr-argdecl . 0)
+       (knr-argdecl-intro . 5)
+       (label . 0)
+       (lambda-intro-cont . +)
+       (member-init-cont . c-lineup-multi-inher)
+       (member-init-intro . +)
+       (module-close . 0)
+       (module-open . 0)
+       (namespace-close . 0)
+       (namespace-open . 0)
+       (objc-method-args-cont . c-lineup-ObjC-method-args)
+       (objc-method-call-cont c-lineup-ObjC-method-call-colons c-lineup-ObjC-method-call +)
+       (objc-method-intro . [0])
+       (statement-case-intro . +)
+       (statement-case-open . +)
+       (stream-op . c-lineup-streamop)
+       (string . -1000)
+       (substatement-label . 0)
+       (substatement-open . +)
+       (template-args-cont c-lineup-template-args +)
+       (topmost-intro-cont first c-lineup-topmost-intro-cont c-lineup-gnu-DEFUN-intro-cont)))
+    "y/c-basic")
+  (c-add-style "y/c-basic" y/c-style-basic)
+
+  (defconst y/c-style-linux
+    '((c-tab-always-indent . nil) ; manualy added
+      (c-basic-offset . 8)     ; Guessed value
+      (c-offsets-alist
+       (block-close . 0)       ; Guessed value
+       (brace-list-close . 0)  ; Guessed value
+       (brace-list-entry . 0)  ; Guessed value
+       (brace-list-intro . +)  ; Guessed value
+       (class-close . 0)       ; Guessed value
+       (defun-block-intro . +) ; Guessed value
+       (defun-close . 0)       ; Guessed value
+       (defun-open . 0)        ; Guessed value
+       (else-clause . 0)       ; Guessed value
+       (inclass . +)           ; Guessed value
+       (statement . 0)         ; Guessed value
+       (statement-block-intro . +) ; Guessed value
+       (statement-cont . +)    ; Guessed value
+       (substatement . +)      ; Guessed value
+       (topmost-intro . 0)     ; Guessed value
+       (access-label . -)
+       (annotation-top-cont . 0)
+       (annotation-var-cont . +)
+       (arglist-close . c-lineup-close-paren)
+       (arglist-cont c-lineup-gcc-asm-reg 0)
+       (arglist-cont-nonempty . c-lineup-arglist)
+       (arglist-intro . c-lineup-arglist-intro-after-paren)
+       (block-open . 0)
+       (brace-entry-open . 0)
+       (brace-list-open . +)
+       (c . c-lineup-C-comments)
+       (case-label . 0)
+       (catch-clause . 0)
+       (class-open . 0)
+       (comment-intro . c-lineup-comment)
+       (composition-close . 0)
+       (composition-open . 0)
+       (cpp-define-intro c-lineup-cpp-define +)
+       (cpp-macro . -1000)
+       (cpp-macro-cont . +)
+       (do-while-closure . 0)
+       (extern-lang-close . 0)
+       (extern-lang-open . 0)
+       (friend . 0)
+       (func-decl-cont . +)
+       (incomposition . +)
+       (inexpr-class . +)
+       (inexpr-statement . +)
+       (inextern-lang . +)
+       (inher-cont . c-lineup-multi-inher)
+       (inher-intro . +)
+       (inlambda . c-lineup-inexpr-block)
+       (inline-close . 0)
+       (inline-open . 0)
+       (inmodule . +)
+       (innamespace . +)
+       (knr-argdecl . 0)
+       (knr-argdecl-intro . 5)
+       (label . 0)
+       (lambda-intro-cont . +)
+       (member-init-cont . c-lineup-multi-inher)
+       (member-init-intro . +)
+       (module-close . 0)
+       (module-open . 0)
+       (namespace-close . 0)
+       (namespace-open . 0)
+       (objc-method-args-cont . c-lineup-ObjC-method-args)
+       (objc-method-call-cont c-lineup-ObjC-method-call-colons c-lineup-ObjC-method-call +)
+       (objc-method-intro . [0])
+       (statement-case-intro . +)
+       (statement-case-open . +)
+       (stream-op . c-lineup-streamop)
+       (string . -1000)
+       (substatement-label . 0)
+       (substatement-open . +)
+       (template-args-cont c-lineup-template-args +)
+       (topmost-intro-cont first c-lineup-topmost-intro-cont c-lineup-gnu-DEFUN-intro-cont)))
+    "y/c-linux")
+  (c-add-style "y/c-linux" y/c-style-linux)
+
+  (defconst y/c-style-alibaba
+    '((c-tab-always-indent . nil) ; manualy added
+      (c-basic-offset . 4)     ; Guessed value
+      (c-offsets-alist
+       (block-close . 0)       ; Guessed value
+       (brace-list-close . 0)  ; Guessed value
+       (brace-list-entry . 0)  ; Guessed value
+       (brace-list-intro . +)  ; Guessed value
+       (class-close . 0)       ; Guessed value
+       (defun-block-intro . +) ; Guessed value
+       (defun-close . -)       ; Guessed value
+       (defun-open . -)        ; Guessed value
+       (else-clause . 0)       ; Guessed value
+       (inclass . +)           ; Guessed value
+       (statement . 0)         ; Guessed value
+       (statement-block-intro . +) ; Guessed value
+       (statement-cont . +)    ; Guessed value
+       (substatement . +)      ; Guessed value
+       (topmost-intro . 0)     ; Guessed value
+       (access-label . -)
+       (annotation-top-cont . 0)
+       (annotation-var-cont . +)
+       (arglist-close . c-lineup-close-paren)
+       (arglist-cont c-lineup-gcc-asm-reg 0)
+       (arglist-cont-nonempty . c-lineup-arglist)
+       (arglist-intro . +)
+       (block-open . 0)
+       (brace-entry-open . 0)
+       (brace-list-open . 0)
+       (c . c-lineup-C-comments)
+       (case-label . 0)
+       (catch-clause . 0)
+       (class-open . 0)
+       (comment-intro . c-lineup-comment)
+       (composition-close . 0)
+       (composition-open . 0)
+       (cpp-define-intro c-lineup-cpp-define +)
+       (cpp-macro . -1000)
+       (cpp-macro-cont . +)
+       (do-while-closure . 0)
+       (extern-lang-close . 0)
+       (extern-lang-open . 0)
+       (friend . 0)
+       (func-decl-cont . +)
+       (incomposition . +)
+       (inexpr-class . +)
+       (inexpr-statement . +)
+       (inextern-lang . +)
+       (inher-cont . c-lineup-multi-inher)
+       (inher-intro . +)
+       (inlambda . c-lineup-inexpr-block)
+       (inline-close . 0)
+       (inline-open . +)
+       (inmodule . +)
+       (innamespace . 0)
+       (knr-argdecl . 0)
+       (knr-argdecl-intro . 0)
+       (label . 0)
+       (lambda-intro-cont . +)
+       (member-init-cont . c-lineup-multi-inher)
+       (member-init-intro . +)
+       (module-close . 0)
+       (module-open . 0)
+       (namespace-close . 0)
+       (namespace-open . 0)
+       (objc-method-args-cont . c-lineup-ObjC-method-args)
+       (objc-method-call-cont c-lineup-ObjC-method-call-colons c-lineup-ObjC-method-call +)
+       (objc-method-intro .
+                          [0])
+       (statement-case-intro . +)
+       (statement-case-open . 0)
+       (stream-op . c-lineup-streamop)
+       (string . -1000)
+       (substatement-label . 0)
+       (substatement-open . 0)
+       (template-args-cont c-lineup-template-args +)
+       (topmost-intro-cont . c-lineup-topmost-intro-cont)))
+    "y/c-alibaba")
+  (c-add-style "y/c-alibaba" y/c-style-alibaba)
+
+  (defun y:c-style-hook()
+    "Config c/c++ style depends on file pathname"
+    (cond ((or (string-match "/pangu/" (buffer-file-name))
+               (string-match "/apsara/" (buffer-file-name))
+               (string-match "/stone/" (buffer-file-name)))
+           (c-set-style "y/c-alibaba"))
+          ((or (string-match "/linux/" (buffer-file-name)))
+           (c-set-style "y/c-alibaba"))
+          (t ;; all default to y/c-basic
+           (c-set-style "y/c-basic"))))
+  (add-hook 'c-mode-common-hook 'y:c-style-hook)
+#+END_SRC
+
 ** orgmode
 Org mode is a great GTD tool.
 - Homepage: https://orgmode.org/
@@ -899,6 +1242,7 @@ selections.
 
 #+BEGIN_SRC emacs-lisp
   (use-package helm-config
+    :diminish
     :ensure helm
     :config
     ;; always use english input in helm minibuffer
@@ -954,6 +1298,72 @@ selections.
     :bind
     (("C-c y t" . youdao-dictionary-search-at-point)
      ("C-c y s" . youdao-dictionary-play-voice-at-point)))
+#+END_SRC
+
+* Search Engineer
+** google
+- google this package: [[https://github.com/Malabarba/emacs-google-this][Emacs Google This]]
+#+BEGIN_SRC emacs-lisp
+  (use-package google-this
+    :diminish
+    :bind-keymap ("C-c s" . google-this-mode-submap)
+    :hook
+    (after-init . google-this-mode))
+#+END_SRC
+
+* Browser
+** emacs-w3m
+- emacs-w3m: [[https://github.com/ecbrown/emacs-w3m][GitHub emacs-w3m]]
+#+BEGIN_SRC emacs-lisp
+  (use-package w3m
+    :pin melpa
+    :config
+    (progn
+      (setq w3m-coding-system 'utf-8
+            w3m-file-coding-system 'utf-8
+            w3m-file-name-coding-system 'utf-8
+            w3m-input-coding-system 'utf-8
+            w3m-output-coding-system 'utf-8
+            ;; emacs-w3m will test the ImageMagick support for png32
+            ;; and create files named "png32:-" everywhere
+            w3m-imagick-convert-program nil
+            w3m-terminal-coding-system 'utf-8
+            w3m-use-cookies t
+            w3m-cookie-accept-bad-cookies t
+            w3m-home-page "http://www.google.com.hk/en"
+            w3m-command-arguments       '("-F" "-cookie")
+            w3m-mailto-url-function     'compose-mail
+            browse-url-browser-function 'w3m
+            ;; use shr to view html mail, but if libxml NOT available
+            ;; use w3m isntead. That's macs 24.3+ default logic
+            mm-text-html-renderer 'w3m ; I prefer w3m
+            w3m-use-toolbar t
+            ;; show images in the browser
+            w3m-default-display-inline-images t
+            ;; w3m-use-tab     nil
+            w3m-confirm-leaving-secure-page nil
+            w3m-search-default-engine "g"
+            w3m-view-this-url-new-session-in-background t
+            w3m-key-binding 'info)))
+
+  (defun y/view-mode-func()
+    (message "Set to view mode func")
+    (define-key view-mode-map "n" 'next-line)
+    (define-key view-mode-map "p" 'previous-line)
+
+    (define-key view-mode-map "." 'ggtags-find-tag-dwim)
+    (define-key view-mode-map "," 'pop-tag-mark)
+    )
+
+  (eval-after-load 'view-mode-hook #'y/view-mode-func)
+
+  ;;(use-package emacs-w3m)
+#+END_SRC
+
+* Version control
+** git
+#+BEGIN_SRC emacs-lisp
+  (use-package magit)
 #+END_SRC
 
 * Daemon
