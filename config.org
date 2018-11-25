@@ -342,8 +342,7 @@ analyze config.org time proportion.
   (setq default-directory "~/")
 
   (when (not (string= system-type "winows-nt"))
-    (desktop-save-mode)
-  )
+    (desktop-save-mode))
 
   (use-package linum
     :config
@@ -354,6 +353,16 @@ analyze config.org time proportion.
     (text-mode . linum-mode)
     (prog-mode . linum-mode))
 #+END_SRC
+
+** calendar
+#+BEGIN_SRC emacs-lisp
+  (use-package calendar
+    :init
+    (setq calendar-week-start-day 1)
+    :bind
+    ("C-= i" . calendar))
+#+END_SRC
+
 ** company
 company is a text completion framework. It means COMplete ANYthing.
 Gitub https://github.com/company-mode/company-mode.
@@ -444,12 +453,32 @@ Disable pos-tip for performance
   ;;   (flycheck-mode . flycheck-pos-tip-mode))
 #+END_SRC
 
+** helpful
+*Helpful* is an alternative to the built-in Emacs help that provides much more
+contextual information.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package helpful)
+#+END_SRC
+
 ** hungry delete
 #+BEGIN_SRC emacs-lisp
   (use-package hungry-delete
     :diminish
     :hook
     (after-init . global-hungry-delete-mode))
+#+END_SRC
+
+** info
+#+BEGIN_SRC emacs-lisp
+  (use-package info
+    :bind
+    ("C-h C-a" . info-apropos))
+
+  (use-package info-colors
+    :after info
+    :hook
+    (Info-selection . info-colors-fontify-node))
 #+END_SRC
 
 ** key binding
@@ -471,10 +500,20 @@ define 3 convenient key binding. Again, I use key-prefix "C-c q" for quick-.
     (interactive)
     (find-file user-init-config))
 
+  (defun y/kill-help()
+    "Change to other window then quit-window."
+    (interactive)
+    (save-excursion
+      (and (switch-to-buffer "*Help*")
+           (kill-buffer))))
+
   (define-key global-map (kbd "C-c q s") #'y/switch-buffer-scratch)
   (define-key global-map (kbd "C-c q i") #'y/switch-buffer-init)
   (define-key global-map (kbd "C-c q c") #'y/switch-buffer-config)
   (define-key global-map (kbd "C-o") #'other-window)
+  (define-key global-map (kbd "C-= c") #'describe-char)
+  (define-key global-map (kbd "C-= v") #'describe-variable)
+  (define-key global-map (kbd "C-h q") #'y/kill-help)
 #+END_SRC
 
 ** mouse
@@ -485,6 +524,20 @@ Disable mouse. I use keyboard.
     :hook
     (prog-mode . disable-mouse-mode)
     (text-mode . disable-mouse-mode))
+#+END_SRC
+
+** proced
+Generate a listing of UNIX system processes.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package proced
+    :init
+    (setq-default proced-auto-update-interval 1
+                  proced-filter 'all)
+    :bind
+    ("C-= p" . proced)
+    :hook
+    (proced-mode . (lambda()(proced-toggle-auto-update 1))))
 #+END_SRC
 
 ** smartparens
@@ -571,6 +624,42 @@ Customize user interface
   (unless (daemonp)
     (add-hook 'after-init-hook
               #'(lambda() (y/frame-init-ui-basic (selected-frame)))))
+#+END_SRC
+
+*** modeline
+WIKI: https://www.emacswiki.org/emacs/ModeLineConfiguration
+
+Smart Mode Line:
+Github: https://github.com/Malabarba/smart-mode-line
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'after-init-hook
+            #'(lambda()
+                (setq display-time-default-load-average nil
+                       display-time-format "%k:%M %a" ;; remove %b %d
+                       display-time-mode t)
+                 (display-time)
+                 ))
+#+END_SRC
+
+Smart mode line. Try sml/apply-theme if want more.
+Regexp example:
+#+BEGIN_SRC text
+  (add-to-list 'sml/replacer-regexp-list '("^~/Git-Projects/" ":Git:") t)
+  (add-to-list 'sml/replacer-regexp-list '("^:Git:\(.*\)/src/main/java/" ":G/\1/SMJ:") t)
+  (add-to-list 'sml/replacer-regexp-list '("^~/Dropbox/" ":DBox:"))
+  (add-to-list 'sml/replacer-regexp-list
+               '("^~/Projects/\\(\\w+\\)/"
+                 (lambda (s) (concat ":" (upcase (match-string 1 s)) ":")))
+               t)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package smart-mode-line
+    :init
+    (setq sml/no-confirm-load-theme t
+          sml/theme 'dark) ;; others: light, respectful
+    (sml/setup))
 #+END_SRC
 
 ** font
@@ -1125,6 +1214,8 @@ Use c-guess-no-install and c-guess-view to generate style template.
   (add-hook 'c-mode-common-hook 'y:c-style-hook)
 #+END_SRC
 
+*** completion
+
 ** orgmode
 Org mode is a great GTD tool.
 - Homepage: https://orgmode.org/
@@ -1232,7 +1323,13 @@ Org mode is a great GTD tool.
     (eshell-mode . y/eshell-hook))
 #+END_SRC
 
-* Minibuf completion
+* Minibuf
+** amx
+Alternative M-x with extra features.
+#+BEGIN_SRC emacs-lisp
+  (use-package amx)
+#+END_SRC
+
 ** helm
 *Helm* is an Emacs framework for incremental completions and narrowing
 selections.
@@ -1275,6 +1372,13 @@ selections.
     :init
     (setq ivy-use-virtual-buffers t)
     (setq ivy-count-format "%d/%d > ")
+    (setq counsel-find-file-ignore-regexp
+          (concat
+           ;; filename begins with #
+           "\\(?:\\`[#.]\\)"
+           ;; filename ends with # or ~
+           "\\|\\(?:\\`.+?[#~]\\'\\)"
+           ))
     :bind
     ("C-s"     . swiper)
     ("C-x C-f" . counsel-find-file)
@@ -1286,8 +1390,46 @@ selections.
     ("C-c k"   . counsel-ag)
     :hook
     (after-init . ivy-mode))
-
 #+END_SRC
+
+* Text process
+** coding system
+#+BEGIN_SRC emacs-lisp
+  (prefer-coding-system 'utf-8-unix)
+  (when (string-equal current-language-environment "Chinese-GBK")
+    ;; Do not use utf-8-unix . chinese-gbk-dos for
+    ;; the set will cause ggtags failure
+    (setq default-process-coding-system '(utf-8 . chinese-gbk)))
+#+END_SRC
+** undo tree
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-tree
+    :pin gnu
+    :diminish
+    :hook
+    (after-init . global-undo-tree-mode))
+#+END_SRC
+** visual regexp
+visual-regexp for Emacs is like replace-regexp, but with live visual
+feedback directly in the buffer.
+- Github: https://github.com/benma/visual-regexp.el
+#+BEGIN_SRC emacs-lisp
+  (use-package visual-regexp
+    :bind
+    ("C-c v r" . vr/replace)
+    ("C-c v q" . vr/query-replace))
+#+END_SRC
+** wgrep
+Writable grep buffer and apply the changes to files
+#+BEGIN_SRC emacs-lisp
+  (use-package wgrep)
+#+END_SRC
+
+** wgrep-ag
+#+BEGIN_SRC emacs-lisp
+  (use-package wgrep-ag)
+#+END_SRC
+
 * Dictionary
 ** youdao
 - Homepage: [[https://github.com/xuchunyang/youdao-dictionary.el][GitHub Youdao]]
