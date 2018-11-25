@@ -22,10 +22,26 @@ The source file header to satisify the source format of elisp area conventions.
 
 - Profiler ::
 Sometimes emacs start slowly, use here methods to analysis.
+*IMPORTANT* DO NOT PUT ANY MORE CONFIG ITEM BEFORE PROFILER SECTION.
+
+- Platform ::
+Different config for Linux/Windows/Mac.
 
 - Convenient ::
 Create a convenient configuration environment like as open config, reload
 config, switch to other window.
+
+- Major Mode ::
+Major mode configuration. e.g.: orgmode, c-mode, c++-mode, etc.
+
+- Minibuf completion ::
+Minibuf narrowing and completion.
+
+- Dictionary ::
+English and Chinese online/local dictionary.
+
+- Daemon ::
+Daemon Config
 
 - Footer ::
 Like as header, it's the footer of source format of elisp area conventions.
@@ -249,6 +265,55 @@ analyze config.org time proportion.
     "Profiling emacs startup time. Show result as a tree.")
 #+END_SRC
 
+* Platform
+** Windows Platform Env and Key-bind
+- check PATH environment
+- register key I use heavily, which are hold by Windows System default.
+#+BEGIN_SRC emacs-lisp
+  (when (string-equal system-type "windows-nt")
+    (unless (getenv "HOME")
+      (warn "Maybe you forgot to set environment variable HOME."))
+
+    ;; M-w: paste, bind to kill-ring-save
+    (w32-register-hot-key [M-w])
+    ;; C-M-n: sp-up-sexp
+    (w32-register-hot-key [C-M-n]))
+#+END_SRC
+
+** Mac
+#+BEGIN_SRC emacs-lisp
+  (when (memq window-system '(mac ns x))
+    (use-package exec-path-from-shell
+      :quelpa (exec-path-from-shell :fetcher github
+                                    :repo "purcell/exec-path-from-shell"
+                                    :stable t)
+      :demand t
+      :init
+      (exec-path-from-shell-initialize)))
+
+  ;; Copy from https://github.com/bbatsov/prelude/blob/master/core/prelude-macos.el
+  (defun y/swap-meta-and-super()
+    "Swap the mapping of Meta and Super.
+  Very useful for people using their Mac with a
+  Windows external keyboard from time to time."
+    (interactive)
+    (if (eq mac-command-modifier 'super)
+        (progn
+          (setq mac-command-modifier 'meta)
+          (setq mac-option-modifier 'super)
+          (message "Command is now bound to META and Option is bound to SUPER."))
+      (setq mac-command-modifier 'super)
+      (setq mac-option-modifier 'meta)
+      (message "Command is now bound to SUPER and Option is bound to META.")))
+
+  ;; m for mac, s for swap
+  (define-key global-map (kbd "C-c m s") 'y/swap-meta-and-super)
+
+  ;; default swap for mac
+  (when (string= system-type "darwin")
+    (y/swap-meta-and-super))
+#+END_SRC
+
 * Convenient
 ** behavior
 - Always use y-or-n replace yes-or-no so you just need input y/n.
@@ -257,6 +322,8 @@ analyze config.org time proportion.
 - Replace selection text after input
 - Adjust large file warning threshold to 256MB
 - Show line number for prog and text mode
+- save buffer
+- desktop for linux/mac (disable Windows for startup very slowly)
 
 #+BEGIN_SRC emacs-lisp
   (defalias 'yes-or-no-p 'y-or-n-p)
@@ -264,15 +331,25 @@ analyze config.org time proportion.
   (setq-default make-backup-files nil)
   (setq-default indent-tabs-mode nil)
 
+  (setq kill-ring-max 500
+        kill-whole-line t)
+  (setq confirm-kill-processes nil)
+
+  (global-set-key (kbd "RET") 'newline-and-indent)
+
   (delete-selection-mode t)
   (setq large-file-warning-threshold (* 256 1024 1024)) ;; 256MB
   (setq default-directory "~/")
+
+  (when (not (string= system-type "winows-nt"))
+    (desktop-save-mode)
+  )
 
   (use-package linum
     :config
     ;; set linum face for bug that text-scale-increase/decrease
     ;; see https://unix.stackexchange.com/a/146781
-    (set-face-attribute 'linum nil :height 100)
+    (set-face-attribute 'linum nil :height 90)
     :hook
     (text-mode . linum-mode)
     (prog-mode . linum-mode))
@@ -369,6 +446,7 @@ https://github.com/flycheck/flycheck-pos-tip.
 ** hungry delete
 #+BEGIN_SRC emacs-lisp
   (use-package hungry-delete
+    :diminish
     :hook
     (after-init . global-hungry-delete-mode))
 #+END_SRC
@@ -398,6 +476,16 @@ define 3 convenient key binding. Again, I use key-prefix "C-c q" for quick-.
   (define-key global-map (kbd "C-o") #'other-window)
 #+END_SRC
 
+** mouse
+Disable mouse. I use keyboard.
+#+BEGIN_SRC emacs-lisp
+  (use-package disable-mouse
+    :diminish
+    :hook
+    (prog-mode . disable-mouse-mode)
+    (text-mode . disable-mouse-mode))
+#+END_SRC
+
 ** smartparens
 Smartparens is a minor mode for dealing with pairs in Emacs.
 - Github: https://github.com/Fuco1/smartparens
@@ -406,25 +494,28 @@ Smartparens is a minor mode for dealing with pairs in Emacs.
 - ref [[https://ebzzry.io/en/emacs-pairs/][emacs-pairs]], [[https://github.com/Fuco1/smartparens][smartparens github]], and [[https://github.com/Fuco1/smartparens/wiki][wiki]]
 
 #+BEGIN_SRC emacs-lisp
-  (use-package smartparens-config
-    :ensure smartparens
+  (use-package smartparens
     :diminish
-    :init
+    :config
+    (require 'smartparens-config)
     (setq sp-base-key-bindings 'paredit)
     (setq sp-autoskip-closing-pair 'always)
     (setq sp-hybrid-kill-entire-symbol nil)
     (sp-use-paredit-bindings)
     (show-smartparens-global-mode t)
-    ;; eliminate warning: ‘sp-local-pair’ might not be defined at runtime
-    (eval-when-compile
-      (sp-local-pair 'lisp-mode "'" nil :actions nil)
-      (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
-      (sp-local-pair 'lisp-interaction-mode "'" nil :actions nil)
-      (sp-local-pair 'lisp-mode "`" nil :actions nil)
-      (sp-local-pair 'emacs-lisp-mode "`" nil :actions nil)
-      (sp-local-pair 'lisp-interaction-mode "`" nil :actions nil))
+    ;; use eval-when-compile or with-eval-after-load can eliminate warning:
+    ;; ‘sp-local-pair’ might not be defined at runtime
+    ;; But when start daemon cause a new error:
+    ;;  Eager macro-expansion failure: (void-function sp-local-pair)
+    (sp-local-pair 'lisp-mode "'" nil :actions nil)
+    (sp-local-pair 'emacs-lisp-mode "'" nil :actions nil)
+    (sp-local-pair 'lisp-interaction-mode "'" nil :actions nil)
+    (sp-local-pair 'lisp-mode "`" nil :actions nil)
+    (sp-local-pair 'emacs-lisp-mode "`" nil :actions nil)
+    (sp-local-pair 'lisp-interaction-mode "`" nil :actions nil)
     :hook
     (after-init . smartparens-global-mode)
+    (after-init . show-smartparens-global-mode)
     (prog-mode . turn-on-smartparens-strict-mode))
 #+END_SRC
 
@@ -482,10 +573,154 @@ Customize user interface
               #'(lambda() (y/frame-init-ui-basic (selected-frame)))))
 #+END_SRC
 
-*** TODO font
-Wait to be complete.
+** font
+elisp Chapter 39 section 39.12 describes more technology about faces. Read it
+for more details:
+- 39.12.9 Font Selection ::
+  https://www.gnu.org/software/emacs/manual/html_node/elisp/Font-Selection.html#Font-Selection
+- 39.12.11 Fontsets ::
+  https://www.gnu.org/software/emacs/manual/html_node/elisp/Fontsets.html#Fontsets
+- 39.12.12 Low-Level Font Representation ::
+  https://www.gnu.org/software/emacs/manual/html_node/elisp/Low_002dLevel-Font.html#Low_002dLevel-Font
 
-*** theme
+Font depends on specific platform (Linux/Mac/Windows). Here according to
+different platform to set beautiful/properly font as much as possible.
+
+- Monospace: Code always use monospace font. See wiki ::
+  https://en.wikipedia.org/wiki/List_of_monospaced_typefaces
+
+Set different font for different major mode. See
+https://emacs.stackexchange.com/a/3044.
+
+#+BEGIN_SRC emacs-lisp
+  (defconst y/font-mono-size-x 15
+    "Monospace font size under graphic.")
+
+  (defconst y/font-mono-size-c 15
+    "Monospace font size under console.")
+
+  (defconst y/font-mono-name-list-default
+    `(("Source Code Variable" . ,y/font-mono-size-x)
+      ("Source Code Pro" . ,y/font-mono-size-x)
+      ("PragmataPro" . ,y/font-mono-size-x)
+      ("ProFont" . ,y/font-mono-size-x)
+      ("Lucida Sans" . ,y/font-mono-size-x)
+      ("Courier New" . ,y/font-mono-size-x)
+      ("Consolas" . ,y/font-mono-size-x)
+      ("DejaVu Sans Mono" . ,y/font-mono-size-x)
+      ("FreeMono" . ,y/font-mono-size-x)
+      ("Liberation Mono" . ,y/font-mono-size-x))
+    "Monospace font name assoc default value.")
+
+  (defconst y/font-monocjk-size-x 15
+    "MonospaceCJK font size under graphic.")
+
+  (defconst y/font-monocjk-size-c 15
+    "MonospaceCJK font size under console.")
+
+  (defconst y/font-monocjk-name-list-default
+    `(("Microsoft YaHei UI" . ,y/font-monocjk-size-x)
+      ("Microsoft YaHei" . ,y/font-monocjk-size-x)
+      ("FangSong" . ,y/font-monocjk-size-x)
+      ("SimSun" . ,y/font-monocjk-size-x)
+      ("AR PL SungtiL GB" . ,y/font-monocjk-size-x)
+      ("AR PL Mingti2L Big5" . ,y/font-monocjk-size-x))
+    "MonospaceCJK font name assoc default value.")
+
+  (defvar y/font-mono-name-list-x nil
+    "Monospace font candidates under graphic. Format is ((name . size) ...).")
+  (defvar y/font-mono-name-list-c nil
+    "Monospace font candidates under console. Format is ((name . size) ...).")
+
+  (defvar y/font-monocjk-name-list-x nil
+    "MonospaceCJK font candidates under graphic. Format is ((name . size) ...).")
+  (defvar y/font-monocjk-name-list-c nil
+    "MonospaceCJK font candidates under console. Format is ((name . size) ...).")
+
+  ;; Customize the name list to satisfy your taste.
+  (cond ((string= system-type "gnu/linux")  ;; Linux
+         (setq y/font-mono-name-list-x y/font-mono-name-list-default
+               y/font-mono-name-list-c y/font-mono-name-list-default)
+         (setq y/font-monocjk-name-list-x y/font-monocjk-name-list-default
+               y/font-monocjk-name-list-c y/font-monocjk-name-list-default))
+        ((string= system-type "darwin")     ;; Mac prepend ?
+         (setq y/font-mono-name-list-x
+               (cons `("Apple Color Emoji" . ,y/font-mono-size-x)
+                     y/font-mono-name-list-default))
+         (setq y/font-mono-name-list-c y/font-mono-name-list-x)
+         (setq y/font-monocjk-name-list-x y/font-monocjk-name-list-default
+               y/font-monocjk-name-list-c y/font-monocjk-name-list-default))
+        ((string= system-type "windows-nt") ;; Windows
+         (setq y/font-mono-name-list-x y/font-mono-name-list-default
+               y/font-mono-name-list-c y/font-mono-name-list-default)
+         (setq y/font-monocjk-name-list-x y/font-monocjk-name-list-default
+               y/font-monocjk-name-list-c y/font-monocjk-name-list-default))
+        (t
+         (setq y/font-mono-name-list-x y/font-mono-name-list-default
+               y/font-mono-name-list-c y/font-mono-name-list-default)
+         (setq y/font-monocjk-name-list-x y/font-monocjk-name-list-default
+               y/font-monocjk-name-list-c y/font-monocjk-name-list-default)))
+
+  (defun y/font-is-exist(namesize)
+    "Check font exist or not. The font property :name is NAME."
+    (if (and (stringp (car namesize))
+             (integerp (cdr namesize))
+             (find-font (font-spec :name (car namesize)
+                                   :size (cdr namesize))))
+        t
+      nil))
+
+  (defun y/font-set-frame-font-if-exist(frame charset namesize &optional fontset)
+    "For FRAME, Set CHARSET's font to NAMESIZE if that font exists. If FONTSET
+  is non-nil, then call set-fontset-font set default font."
+    (if (y/font-is-exist namesize)
+        (progn
+          (message "Set Font Frame(%s) Charset(%s) to %s" frame charset namesize)
+          (if fontset
+              (set-frame-font (font-spec :name (car namesize)
+                                         :size (cdr namesize)) nil nil)
+            (set-fontset-font nil charset (font-spec :name (car namesize)
+                                                     :size (cdr namesize))
+                              frame))
+          t)
+      nil))
+
+  (defun y/font-set-frame-try-list(frame charset namesizeassoc &optional fontset)
+    "For FRAME, from front to back in NAMESIZEASSOC, try to set CHARSET's font."
+    (let ((r nil))
+      (dolist (namesize namesizeassoc)
+        (unless r
+          (and (y/font-set-frame-font-if-exist
+                frame charset namesize fontset)
+               (setq r t))))))
+
+  (defun y/font-set-frame-font-by-display
+      (frame charset namesizeassocx namesizeassocc &optional fontset)
+    "For FRAME, from front to back in namesizeassoc, try to set CHARSET's font.
+  If frame run in graphic, use NAMESIZEASSOCX, otherwise use NAMESIZEASSOCC"
+    (if (display-graphic-p)
+        (y/font-set-frame-try-list frame charset namesizeassocx fontset)
+      (y/font-set-frame-try-list frame charset namesizeassocc fontset)))
+
+  (defun y/font-set(&optional frame)
+    "For FRAME set properly font."
+    (with-selected-frame frame
+        (y/font-set-frame-font-by-display
+         frame nil y/font-mono-name-list-x y/font-mono-name-list-c t)
+        (dolist (charset '(kana han symbol cjk-misc bopomofo))
+          (y/font-set-frame-font-by-display
+           frame charset y/font-monocjk-name-list-x y/font-monocjk-name-list-c))))
+
+  ;; daemon hook, exec after emacsclient created
+  (add-hook 'after-make-frame-functions #'y/font-set)
+
+  ;; non-daemon hook
+  (unless (daemonp)
+    (add-hook 'after-init-hook
+              #'(lambda() (y/font-set (selected-frame)))))
+#+END_SRC
+
+** theme
 Theme is another important ui aspect. Manual
 https://www.gnu.org/software/emacs/manual/html_node/emacs/Custom-Themes.html,
 https://www.gnu.org/software/emacs/manual/html_node/emacs/Creating-Custom-Themes.html
@@ -502,6 +737,7 @@ and select zenburn as default.
 #+BEGIN_SRC emacs-lisp
   (use-package zenburn-theme)
   (use-package monokai-theme)
+  (use-package solarized-theme)
 
   (load-theme 'zenburn t)
 #+END_SRC
@@ -543,6 +779,194 @@ whitespace render a space, tabs, newlines to a visible glyph.
     (before-save . whitespace-cleanup))
 
   ;; theme has no hook. use advice.
+#+END_SRC
+
+* Major mode
+** orgmode
+Org mode is a great GTD tool.
+- Homepage: https://orgmode.org/
+- Community: https://orgmode.org/worg/index.html
+
+*** directory and key binding
+- Homepage: [[http://orgmode.org/]]
+- My org layout:
+#+BEGIN_SRC text
+  org             <-- The root of org
+  ├── notes.org   <-- captures
+  ├── h           <-- Homepage
+  ├── i           <-- work(inspur)
+  ├── a           <-- work(alibaba)
+  ├── p           <-- personal/private data
+  └── misc        <-- All others
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org
+    :diminish org
+    :init
+    (progn
+      (setq org-support-shift-select t)
+      (setq org-src-fontify-natively t))
+    :config
+    (progn
+      (setq org-directory "~/org")
+      (setq org-agenda-files (list org-directory
+                                   (concat org-directory "/a")
+                                   (concat org-directory "/p")))
+      (setq org-default-notes-file (concat org-directory "/notes.org"))
+      (setq system-time-locale "C")
+      (setq org-display-custom-times t)
+      (setq org-time-stamp-custom-formats
+            '("<%Y-%m-%d %a>" . "<%Y-%m-%d %a %H:%M>")))
+    :bind
+    (("C-c c" . org-capture)
+     ("C-c a" . org-agenda)
+     ("C-o" . other-window))
+    :mode
+    ("\\.org\\'" . org-mode))
+
+  ;; disable org-src flycheck
+  (use-package org-src
+    :ensure org-plus-contrib
+    :diminish
+    :hook
+    (org-src-mode . (lambda() (flycheck-mode -1))))
+#+END_SRC
+
+*** bullets
+- Homepage: [[https://github.com/sabof/org-bullets][GitHub Org Bullets]]
+- FIXME: Win7 Ultimate CN version can not show heading bullets low than level 3
+#+BEGIN_SRC emacs-lisp
+  (when (find-font (font-spec :name "Source Code Variable" :size 15))
+    (use-package org-bullets
+      :init
+      (add-hook 'org-mode-hook
+                (lambda()(org-bullets-mode 1)))))
+#+END_SRC
+
+*** pomodoro
+- https://github.com/lolownia/org-pomodoro
+#+BEGIN_SRC emacs-lisp
+  (use-package org-pomodoro
+    :pin melpa
+    :init
+    (setq org-pomodoro-length 30))
+#+END_SRC
+
+** eshell
+*Eshell* is a shell-like command interpreter implemented in Emacs Lisp.
+- https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
+- Manual: https://www.gnu.org/software/emacs/manual/html_mono/eshell.html
+- Mastering eshell: https://www.masteringemacs.org/article/complete-guide-mastering-eshell
+
+#+BEGIN_SRC emacs-lisp
+  (defun y/eshell-clear()
+    "Clear Screen for Eshell mode."
+    (interactive)
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (eshell-send-input))
+    ;; recenter-top-bottom will reposition to previous pos when input
+    ;; (recenter-top-bottom 1)
+    )
+
+  (defun y/eshell-hook()
+    "Config Eshell Mode."
+    ;;
+    (define-key eshell-mode-map (kbd "C-c") #'eshell-interrupt-process)
+    (define-key eshell-mode-map (kbd "C-d") #'eshell-send-eof-to-process)
+    (define-key eshell-mode-map (kbd "C-l") #'y/eshell-clear))
+
+  (use-package eshell
+    :demand t
+    :init
+    (setq eshell-scroll-to-bottom-on-input 'all)
+    ;; Eshell has a bug about eshell-mode-map, use hook function to bind key.
+    ;; :bind
+    ;; (:map eshell-mode-map
+    ;;    ("C-c" . eshell-interrupt-process))
+    :hook
+    (eshell-mode . y/eshell-hook))
+#+END_SRC
+
+* Minibuf completion
+** helm
+*Helm* is an Emacs framework for incremental completions and narrowing
+selections.
+
+- Github: https://github.com/emacs-helm/helm
+- WIKI: https://github.com/emacs-helm/helm/wiki
+
+#+BEGIN_SRC emacs-lisp
+  (use-package helm-config
+    :ensure helm
+    :config
+    ;; always use english input in helm minibuffer
+    ;; use C-\ (toggle-input-method) to toggle to other(e.g. pyim)
+    (helm-set-local-variable 'current-input-method nil)
+    :bind
+    ;;("C-x C-f" . helm-find-files)
+    ("M-x" . helm-M-x)
+    ("C-x b" . helm-mini))
+#+END_SRC
+
+** swiper
+*Swiper* is a flexible, simple tools for minibuffer completion in Emacs.
+- Github: https://github.com/abo-abo/swiper
+- Manual: http://oremacs.com/swiper/
+- WIKI: https://github.com/abo-abo/swiper/wiki
+
+#+BEGIN_SRC emacs-lisp
+  ;; short bindings with a common prefix
+  ;; https://github.com/abo-abo/hydra
+  (use-package hydra
+    :demand t) ;; used by ivy
+  (use-package ivy
+    ;; archive version ivy-0.10 lost counsel.el, use github replaced
+    :quelpa (ivy :fetcher github
+                 :repo "abo-abo/swiper"
+                 :stable nil)
+    :diminish
+    :after hydra ;; swiper internal use, compile error if absent
+    :init
+    (setq ivy-use-virtual-buffers t)
+    (setq ivy-count-format "%d/%d > ")
+    :bind
+    ("C-s"     . swiper)
+    ("C-x C-f" . counsel-find-file)
+    ("C-h f"   . counsel-describe-function)
+    ("C-h v"   . counsel-describe-variable)
+    ("C-c g f" . counsel-git)
+    ("C-c g g" . counsel-git-grep)
+    ("C-c g l" . counsel-git-log)
+    ("C-c k"   . counsel-ag)
+    :hook
+    (after-init . ivy-mode))
+
+#+END_SRC
+* Dictionary
+** youdao
+- Homepage: [[https://github.com/xuchunyang/youdao-dictionary.el][GitHub Youdao]]
+#+BEGIN_SRC emacs-lisp
+  (use-package youdao-dictionary
+    :init
+    (setq url-automatic-caching t)
+    :bind
+    (("C-c y t" . youdao-dictionary-search-at-point)
+     ("C-c y s" . youdao-dictionary-play-voice-at-point)))
+#+END_SRC
+
+* Daemon
+#+BEGIN_SRC emacs-lisp
+  (defun y/daemon-tcp()
+    "Configure Emacs Daemon use TCP for remote supports."
+    (when (daemonp)
+      (setq server-use-tcp 1)
+      (setq server-host "192.168.1.111")
+      (setq server-port 8888)
+      ;; must 64 chars!
+      (setq server-auth-key "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYANYG")
+      (message "Daemon TCP URI:%s:%d" server-host server-port)))
 #+END_SRC
 
 * Footer
