@@ -1293,6 +1293,11 @@ C++20 and Technical Specification.
     :diminish modern-c++-font-lock-mode
     :hook
     (c++-mode . modern-c++-font-lock-mode))
+
+  (add-to-list 'auto-mode-alist '("\\.cpp\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.hpp\\'" . c++-mode))
+
 #+END_SRC
 
 ** orgmode
