@@ -1676,10 +1676,10 @@ Writable grep buffer and apply the changes to files
             (progn
               (or (string-prefix-p "/" d)
                   (setq d (concat dl d)))
-              (add-to-list 'de d))
+              (add-to-list 'de (file-truename d)))
           (warn "y/projects: not a string include path:" d)))
       ;; Alwasys add root directory
-      (and dl (add-to-list 'de dl))
+      (and dl (add-to-list 'de (file-truename dl)))
 
       (setq semantic-c-dependency-system-include-path de)
       (setq semanticdb-project-roots de)
@@ -1700,7 +1700,8 @@ Writable grep buffer and apply the changes to files
     "Linux kernel do not show tab color."
     (interactive)
     (when (and (equal y/project-type 'linux-kernel)
-               (string= major-mode "c-mode"))
+               (or (string= major-mode "c-mode")
+                   (string= major-mode "c++-mode")))
       (make-local-variable 'whitespace-display-mappings)
       (make-local-variable 'whitespace-style)
       (setq whitespace-display-mappings
@@ -1719,13 +1720,15 @@ Writable grep buffer and apply the changes to files
   (defun y/project-set-linux-kernel()
     "Set project to linux kernel."
     (interactive)
+    (message "Set to linux %s" (buffer-file-name))
     (setq buffer-read-only t)
     (y/whitespace-linux-kernel-style)
     (setq y/project-include-path
           (append y/project-include-path
                   '("include/" "include/uapi" "arch/x86/include/")))
     (y/project-set-default)
-    (setq-mode-local c-mode semantic-dependency-system-include-path nil))
+    (setq-mode-local c-mode semantic-dependency-system-include-path
+                     semantic-c-dependency-system-include-path))
 
   (add-to-list 'safe-local-eval-forms '(y/project-set-linux-kernel))
   (add-to-list 'safe-local-variable-values '(y/project-type . linux-kernel))
