@@ -1633,8 +1633,10 @@ Writable grep buffer and apply the changes to files
 
   (defvar-local y/project-type nil
     "Current project type. Candidates are linux-kernel, nil")
-  (defvar y/project--last-dir-local nil)
-  (defvar y/project--buffer-changed nil)
+  (defvar-local y/project-include-path nil
+    "Project additional include path.")
+  (defvar y/project--buffer-changed nil
+    "Project internal used to check buffer switched or not.")
 
   (defvar y/semantic-c-system-include-path nil
     "Default system include path for C.")
@@ -1664,24 +1666,35 @@ Writable grep buffer and apply the changes to files
     "Set project to default."
     (y/semantic-set-default-include-path)
     ;; Always add current directory to c-dependency-include-path
-    (let ((dl (locate-dominating-file default-directory
+    (let ((de '())
+          (dl (locate-dominating-file default-directory
                                       dir-locals-file)))
-      ;; (make-local-variable 'semantic-c-dependency-system-include-path)
-      (and dl (setq dl `(,dl)))
-      (setq semantic-c-dependency-system-include-path dl)
-      (setq semanticdb-project-roots dl)
-      (setq-mode-local c-mode semantic-dependency-include-path dl)
-      (setq-mode-local c++-mode semantic-dependency-include-path dl)
+
+      ;; append dl to include path if not absolute path
+      (dolist (d y/project-include-path)
+        (if (stringp d)
+            (progn
+              (or (string-prefix-p "/" d)
+                  (setq d (concat dl d)))
+              (add-to-list 'de d))
+          (warn "y/projects: not a string include path:" d)))
+      ;; Alwasys add root directory
+      (and dl (add-to-list 'de dl))
+
+      (setq semantic-c-dependency-system-include-path de)
+      (setq semanticdb-project-roots de)
+      (setq-mode-local c-mode semantic-dependency-include-path de)
+      (setq-mode-local c++-mode semantic-dependency-include-path de)
 
       ;; set c++ for c/c++ both
-      (when dl
+      (when de
         (if (string= major-mode "c-mode")
-            (setq dl (append dl y/semantic-c-system-include-path))
-          (setq dl (append dl y/semantic-c++-system-include-path))))
-      (setq flycheck-clang-include-path dl
-            flycheck-clang-includes dl
-            flycheck-gcc-include-path dl
-            company-c-headers-path-system dl)))
+            (setq de (append de y/semantic-c-system-include-path))
+          (setq de (append de y/semantic-c++-system-include-path))))
+      (setq flycheck-clang-include-path de
+            flycheck-clang-includes de
+            flycheck-gcc-include-path de
+            company-c-headers-path-system de)))
 
   (defun y/whitespace-linux-kernel-style()
     "Linux kernel do not show tab color."
@@ -1708,31 +1721,15 @@ Writable grep buffer and apply the changes to files
     (interactive)
     (setq buffer-read-only t)
     (y/whitespace-linux-kernel-style)
-    (let (dl (dir-local (locate-dominating-file default-directory
-                                                dir-locals-file)))
-      (when (and dir-local
-                 (semantic-active-p))
-          (progn
-            (setq semanticdb-project-roots `(,dir-local))
-            (setq dl `(,(concat dir-local "include/")
-                       ,(concat dir-local "include/uapi")
-                       ,(concat dir-local "arch/x86/include/")))
-            (setq semantic-dependency-include-path dl)
-            ;; (setq semantic-c-dependency-system-include-path dl)
-            (setq-mode-local c-mode semantic-dependency-system-include-path dl)
-            ;; (setq-mode-local c-mode semantic-c-dependency-system-include-path dl)
-            (setq flycheck-clang-include-path dl
-                  flycheck-clang-includes dl
-                  flycheck-gcc-include-path dl
-                  company-c-headers-path-system dl)))))
+    (setq y/project-include-path
+          (append y/project-include-path
+                  '("include/" "include/uapi" "arch/x86/include/")))
+    (y/project-set-default)
+    (setq-mode-local c-mode semantic-dependency-system-include-path nil))
 
   (add-to-list 'safe-local-eval-forms '(y/project-set-linux-kernel))
   (add-to-list 'safe-local-variable-values '(y/project-type . linux-kernel))
-  ;; (add-hook 'c-mode-common-hook
-  ;;          #'y/semantic-set-default-include-path)
-
-  ;; (put 'y/dir-local-c-include-path 'safe-local-eval-forms
-  ;;  (lambda (x) t))
+  (put 'y/project-include-path 'safe-local-variable #'listp)
 
   (setq enable-dir-local-variables t
         enable-remote-dir-locals t
@@ -1752,17 +1749,13 @@ Writable grep buffer and apply the changes to files
 
       (let ((dir-local (locate-dominating-file default-directory
                                                dir-locals-file)))
-        (unless (equal y/project--last-dir-local dir-local)
-          ;; update dir-local so next ignore
-          (setq y/project--last-dir-local dir-local)
-          ;; Do real config
-          )
         (cond ((equal y/project-type 'linux-kernel)
                (y/project-set-linux-kernel))
               (t
                (y/project-set-default))))))
 
   (add-hook 'post-command-hook #'y/project-config-hook)
+  ;; Follow hooks not work properly, use post-command-hook replaced.
   ;; (add-hook 'hack-local-variables-hook #'y/project-config-hook)
   ;; (add-hook 'buffer-list-update-hook #'y/project-config-hook)
 #+END_SRC
