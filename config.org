@@ -265,6 +265,22 @@ analyze config.org time proportion.
     "Profiling emacs startup time. Show result as a tree.")
 #+END_SRC
 
+* Early Packages
+** diminish
+Diminish minor modes information displayed on the mode line, saving valuable
+mode line space. See https://github.com/emacsmirror/diminish.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package diminish
+    :init
+    (diminish 'abbrev-mode))
+  ;; (require 'diminish)
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
 * Platform
 ** Windows Platform Env and Key-bind
 - check PATH environment
@@ -310,8 +326,8 @@ analyze config.org time proportion.
   (define-key global-map (kbd "C-c m s") 'y/swap-meta-and-super)
 
   ;; default swap for mac
-  (when (string= system-type "darwin")
-    (y/swap-meta-and-super))
+  ;; (when (string= system-type "darwin")
+  ;;  (y/swap-meta-and-super))
 #+END_SRC
 
 * Convenient
@@ -373,17 +389,11 @@ configurations are complex and huge. If still use orgmode babel to maintain
 company config, the config will be scattered everywhere. Therefore, I put all
 company config in a special file y-init-company.el to enhance maintenance.
 
+Material:
+- Manual: https://company-mode.github.io/
+
 #+BEGIN_SRC emacs-lisp
   (require 'y-init-company)
-#+END_SRC
-
-** diminish
-Diminish minor modes information displayed on the mode line, saving valuable
-mode line space. See https://github.com/emacsmirror/diminish.
-
-#+BEGIN_SRC emacs-lisp
-  ;; (use-package diminish)
-  (require 'diminish)
 #+END_SRC
 
 ** eldoc
@@ -425,6 +435,8 @@ configuring a development environment such as C/C++.
     :diminish
     :init
     (setq flycheck-emacs-lisp-load-path 'inherit)
+    :config
+    (add-to-list 'flycheck-clang-warnings "no-pragma-once-outside-header")
     :hook
     (after-init . global-flycheck-mode))
 #+END_SRC
@@ -514,6 +526,7 @@ define 3 convenient key binding. Again, I use key-prefix "C-c q" for quick-.
   (define-key global-map (kbd "C-= c") #'describe-char)
   (define-key global-map (kbd "C-= v") #'describe-variable)
   (define-key global-map (kbd "C-h q") #'y/kill-help)
+  (define-key global-map (kbd "M-,") #'pop-tag-mark)
 #+END_SRC
 
 ** mouse
@@ -657,9 +670,13 @@ Regexp example:
 #+BEGIN_SRC emacs-lisp
   (use-package smart-mode-line
     :init
-    (setq sml/no-confirm-load-theme t
+    (setq sml/col-number-format "%02c"
+          sml/name-width 15
+          sml/no-confirm-load-theme t
           sml/theme 'dark) ;; others: light, respectful
-    (sml/setup))
+    (sml/setup)
+    (add-to-list 'sml/replacer-regexp-list '(".*/archive" ":AR:"))
+    (add-to-list 'sml/replacer-regexp-list '(".**/archiveserver" ":AS:")))
 #+END_SRC
 
 ** font
@@ -764,7 +781,7 @@ https://emacs.stackexchange.com/a/3044.
   is non-nil, then call set-fontset-font set default font."
     (if (y/font-is-exist namesize)
         (progn
-          (message "Set Font Frame(%s) Charset(%s) to %s" frame charset namesize)
+          ;; (message "Set Font Frame(%s) Charset(%s) to %s" frame charset namesize)
           (if fontset
               (set-frame-font (font-spec :name (car namesize)
                                          :size (cdr namesize)) nil nil)
@@ -801,12 +818,12 @@ https://emacs.stackexchange.com/a/3044.
            frame charset y/font-monocjk-name-list-x y/font-monocjk-name-list-c))))
 
   ;; daemon hook, exec after emacsclient created
-  (add-hook 'after-make-frame-functions #'y/font-set)
+  ;; (add-hook 'after-make-frame-functions #'y/font-set)
 
   ;; non-daemon hook
-  (unless (daemonp)
-    (add-hook 'after-init-hook
-              #'(lambda() (y/font-set (selected-frame)))))
+  ;; (unless (daemonp)
+  ;;  (add-hook 'after-init-hook
+  ;;            #'(lambda() (y/font-set (selected-frame)))))
 #+END_SRC
 
 ** theme
@@ -864,9 +881,21 @@ TODO LIST:
       (setq whitespace-display-mappings
             '((space-mark 32 [183] [46])
               (newline-mark 10 [182 10])
-              (tab-mark 9 [?. 9] [92 9])))
+              ;; (tab-mark 9 [?. 9] [92 9])
+              (tab-mark   ?\t   [?\xBB ?\t] [?\\ ?\t])))
       (y/whitespace-color))
     :hook
+    ;; (c-mode-common . (lambda()
+    ;;                    "Enable whitespace-mode."
+    ;;                    ;; Whitespace remove tabs-before-space for c-Linux.
+    ;;                    (when (and (string= major-mode "c-mode")
+    ;;                               (string= c-indentation-style "y/c-linux"))
+    ;;                      (make-local-variable 'whitespace-style)
+    ;;                      (setq whitespace-style
+    ;;                            (remove 'tabs whitespace-style))
+    ;;                      (setq whitespace-style
+    ;;                            (remove 'space-after-tab::tab whitespace-style)))
+    ;;                    (whitespace-mode 1)))
     (prog-mode . whitespace-mode)
     (text-mode . whitespace-mode)
     (before-save . whitespace-cleanup))
@@ -903,24 +932,6 @@ TODO LIST:
     (add-hook 'prog-mode-hook 'highlight-parentheses-mode))
 #+END_SRC
 
-*** ggtags
-#+BEGIN_SRC emacs-lisp
-  (use-package ggtags
-    :diminish
-    :init
-    :bind
-    (:map ggtags-mode-map
-          ("C-c g s" . ggtags-find-other-symbol)
-          ("M-."     . ggtags-find-tag-dwim)
-          ("M-,"     . pop-tag-mark)
-          ("C-c g h" . ggtags-view-tag-history)
-          ("C-c g r" . ggtags-find-reference)
-          ("C-c g f" . ggtags-find-file)
-          ("C-c g c" . ggtags-create-tags)
-          ("C-c g u" . ggtags-update-tags))
-    :hook
-    (c-mode-common . ggtags-mode))
-#+END_SRC
 
 *** iedit
 - Homepage: [[https://github.com/victorhge/iedit][Github Iedit]]
@@ -933,12 +944,9 @@ TODO LIST:
 *** stickfunc
 - HomePage: [[https://github.com/tuhdo/semantic-stickyfunc-enhance#features][GitHub StickFunc Enhance]]
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package stickyfunc-enhance
-  ;;   :pin melpa
-  ;;   :diminish
-  ;;   :init
-  ;;   (add-to-list 'semantic-default-submodes 'global-semantic-stickyfunc-mode)
-  ;;   (semantic-mode 1))
+  (use-package stickyfunc-enhance
+    :pin melpa
+    :diminish)
 #+END_SRC
 
 *** yasnippet
@@ -951,7 +959,7 @@ HTML, CSS and more.
 
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
-    :diminish
+    :diminish yas-minor-mode
     :hook
     (prog-mode . yas-minor-mode))
 
@@ -961,37 +969,38 @@ HTML, CSS and more.
 ** c mode
 *** style
 Use c-guess-no-install and c-guess-view to generate style template.
+Read variable c-offsets-alist for more details.
 
 #+BEGIN_SRC emacs-lisp
   (defconst y/c-style-basic
     '((c-tab-always-indent . nil)
       (c-basic-offset . 4)
       (c-offsets-alist
-       (block-close . 0)
-       (brace-list-close . 0)
-       (brace-list-entry . 0)
-       (brace-list-intro . +)
-       (class-close . 0)
-       (defun-block-intro . +)
-       (defun-close . 0)
-       (defun-open . 0)
-       (else-clause . 0)
-       (inclass . +)
-       (statement . 0)
-       (statement-block-intro . +)
-       (statement-cont . +)
-       (substatement . +)
-       (topmost-intro . 0)
+       (block-close . 0)       ; Guessed value
+       (brace-list-close . 0)  ; Guessed value
+       (brace-list-entry . 0)  ; Guessed value
+       (brace-list-intro . +)  ; Guessed value
+       (class-close . 0)       ; Guessed value
+       (defun-block-intro . +) ; Guessed value
+       (defun-close . -)       ; Guessed value
+       (defun-open . -)        ; Guessed value
+       (else-clause . 0)       ; Guessed value
+       (inclass . +)           ; Guessed value
+       (statement . 0)         ; Guessed value
+       (statement-block-intro . +) ; Guessed value
+       (statement-cont . +)    ; Guessed value
+       (substatement . +)      ; Guessed value
+       (topmost-intro . 0)     ; Guessed value
        (access-label . -)
        (annotation-top-cont . 0)
        (annotation-var-cont . +)
        (arglist-close . c-lineup-close-paren)
        (arglist-cont c-lineup-gcc-asm-reg 0)
        (arglist-cont-nonempty . c-lineup-arglist)
-       (arglist-intro . c-lineup-arglist-intro-after-paren)
+       (arglist-intro . +)
        (block-open . 0)
        (brace-entry-open . 0)
-       (brace-list-open . +)
+       (brace-list-open . 0)
        (c . c-lineup-C-comments)
        (case-label . 0)
        (catch-clause . 0)
@@ -1015,11 +1024,11 @@ Use c-guess-no-install and c-guess-view to generate style template.
        (inher-intro . +)
        (inlambda . c-lineup-inexpr-block)
        (inline-close . 0)
-       (inline-open . 0)
+       (inline-open . +)
        (inmodule . +)
        (innamespace . +)
        (knr-argdecl . 0)
-       (knr-argdecl-intro . 5)
+       (knr-argdecl-intro . 0)
        (label . 0)
        (lambda-intro-cont . +)
        (member-init-cont . c-lineup-multi-inher)
@@ -1030,15 +1039,16 @@ Use c-guess-no-install and c-guess-view to generate style template.
        (namespace-open . 0)
        (objc-method-args-cont . c-lineup-ObjC-method-args)
        (objc-method-call-cont c-lineup-ObjC-method-call-colons c-lineup-ObjC-method-call +)
-       (objc-method-intro . [0])
+       (objc-method-intro .
+                          [0])
        (statement-case-intro . +)
-       (statement-case-open . +)
+       (statement-case-open . 0)
        (stream-op . c-lineup-streamop)
        (string . -1000)
        (substatement-label . 0)
-       (substatement-open . +)
+       (substatement-open . 0)
        (template-args-cont c-lineup-template-args +)
-       (topmost-intro-cont first c-lineup-topmost-intro-cont c-lineup-gnu-DEFUN-intro-cont)))
+       (topmost-intro-cont . c-lineup-topmost-intro-cont)))
     "y/c-basic")
   (c-add-style "y/c-basic" y/c-style-basic)
 
@@ -1052,8 +1062,8 @@ Use c-guess-no-install and c-guess-view to generate style template.
        (brace-list-intro . +)  ; Guessed value
        (class-close . 0)       ; Guessed value
        (defun-block-intro . +) ; Guessed value
-       (defun-close . 0)       ; Guessed value
-       (defun-open . 0)        ; Guessed value
+       (defun-close . -)       ; Guessed value
+       (defun-open . -)        ; Guessed value
        (else-clause . 0)       ; Guessed value
        (inclass . +)           ; Guessed value
        (statement . 0)         ; Guessed value
@@ -1070,7 +1080,7 @@ Use c-guess-no-install and c-guess-view to generate style template.
        (arglist-intro . c-lineup-arglist-intro-after-paren)
        (block-open . 0)
        (brace-entry-open . 0)
-       (brace-list-open . +)
+       (brace-list-open . 0)
        (c . c-lineup-C-comments)
        (case-label . 0)
        (catch-clause . 0)
@@ -1115,7 +1125,7 @@ Use c-guess-no-install and c-guess-view to generate style template.
        (stream-op . c-lineup-streamop)
        (string . -1000)
        (substatement-label . 0)
-       (substatement-open . +)
+       (substatement-open . 0)
        (template-args-cont c-lineup-template-args +)
        (topmost-intro-cont first c-lineup-topmost-intro-cont c-lineup-gnu-DEFUN-intro-cont)))
     "y/c-linux")
@@ -1201,20 +1211,89 @@ Use c-guess-no-install and c-guess-view to generate style template.
     "y/c-alibaba")
   (c-add-style "y/c-alibaba" y/c-style-alibaba)
 
-  (defun y:c-style-hook()
+  (defun y/c-style-hook()
     "Config c/c++ style depends on file pathname"
-    (cond ((or (string-match "/pangu/" (buffer-file-name))
-               (string-match "/apsara/" (buffer-file-name))
-               (string-match "/stone/" (buffer-file-name)))
-           (c-set-style "y/c-alibaba"))
-          ((or (string-match "/linux/" (buffer-file-name)))
-           (c-set-style "y/c-alibaba"))
-          (t ;; all default to y/c-basic
-           (c-set-style "y/c-basic"))))
-  (add-hook 'c-mode-common-hook 'y:c-style-hook)
+    (when (buffer-file-name)
+      (cond ((or (string-match "/pangu/" (buffer-file-name))
+                 (string-match "/apsara/" (buffer-file-name))
+                 (string-match "/stone/" (buffer-file-name)))
+             (c-set-style "y/c-alibaba"))
+            ((or (string-match "/linux.*/" (buffer-file-name)))
+             (c-set-style "y/c-linux")
+             ;; Linux use real tab. Auto buffer-local.
+             (setq indent-tabs-mode t))
+            (t ;; all default to y/c-basic
+             (c-set-style "y/c-basic")))))
+  (add-hook 'c-mode-common-hook 'y/c-style-hook)
 #+END_SRC
 
 *** completion
+See [[file:lisp/y-init-company.el][y-init-company.el]].
+
+*** function-args
+GNU Emacs package for showing an inline arguments hint for the C/C++ function at point
+- Github: https://github.com/abo-abo/function-args
+
+*** speedbar
+#+BEGIN_SRC emacs-lisp
+  (use-package sr-speedbar
+    :init
+    (setq sr-speedbar-auto-refresh t
+          speedbar-use-images nil
+          sr-speedbar-width-x 10
+          sr-speedbar-max-width 20)
+    :bind
+    ("C-c w b" . sr-speedbar-toggle))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package function-args
+    :config
+    (fa-config-default))
+#+END_SRC
+
+** log view
+Here is an extend template. Company Specialized config dispath to private
+config.
+
+- Github: https://github.com/doublep/logview
+#+BEGIN_SRC emacs-lisp
+  (use-package logview
+    :init
+    (setq logview-additional-submodes
+          '(("ycode-log-submode"
+             (format . "[TIMESTAMP] [LEVEL] [THREAD]")
+             (levels . "ycode-log-level")
+             ;; define timestamp if not one of standard
+             ;; (timestamp . "yyyy-MM-dd HH:mm:ss.UUUUUU")
+             (aliases "ycode-log"))))
+
+    (setq logview-additional-level-mappings
+          '(("ycode-log-level"
+             (error "ERROR" "FATAL")
+             (warning "WARNING")
+             (information "INFO")
+             (debug "DEBUG")
+             (trace "TRACE")))))
+#+END_SRC
+
+** semantic
+- Manual: https://www.gnu.org/software/emacs/manual/html_mono/semantic.html
+- Speedbar: https://www.gnu.org/software/emacs/manual/html_mono/emacs.html#Speedbar
+
+** c++ mode
+*modern-cpp-font-lock* Syntax highlighting support for "Modern C++" - until
+C++20 and Technical Specification.
+
+- Github: https://github.com/ludwigpacifici/modern-cpp-font-lock
+- Wiki: https://github.com/ludwigpacifici/modern-cpp-font-lock/wiki
+
+#+BEGIN_SRC emacs-lisp
+  (use-package modern-cpp-font-lock
+    :diminish modern-c++-font-lock-mode
+    :hook
+    (c++-mode . modern-c++-font-lock-mode))
+#+END_SRC
 
 ** orgmode
 Org mode is a great GTD tool.
@@ -1321,6 +1400,37 @@ Org mode is a great GTD tool.
     ;;    ("C-c" . eshell-interrupt-process))
     :hook
     (eshell-mode . y/eshell-hook))
+#+END_SRC
+
+* Minor mode
+** abbrev
+Abbreviations expands package. Builtin.
+
+- Manual: https://www.gnu.org/software/emacs/manual/html_node/emacs/Abbrevs.html#Abbrevs
+- Wiki: https://www.emacswiki.org/emacs/AbbrevMode
+- Ergo: http://ergoemacs.org/emacs/emacs_abbrev_mode_tutorial.html
+
+#+BEGIN_SRC emacs-lisp
+  (require 'abbrev)
+  (setq abbrev-file-name (locate-user-emacs-file ".abbrev.data"))
+  (setq-default abbrev-mode t)
+  (setq save-abbrevs 'silently)
+#+END_SRC
+
+** tags
+*xref* used to find definitions and references of any function, method,
+struct, macro,. Builtin.
+
+*ggtags* and *counsel-gtags* are global wrapper.
+
+Put all in y-init-tags.el
+
+- Manual: https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html#Xref
+- ggtags github: https://github.com/leoliu/ggtags
+- counsel-gtags github: https://github.com/syohex/emacs-counsel-gtags
+
+#+BEGIN_SRC emacs-lisp
+  (require 'y-init-tags)
 #+END_SRC
 
 * Minibuf
@@ -1448,7 +1558,7 @@ Writable grep buffer and apply the changes to files
 #+BEGIN_SRC emacs-lisp
   (use-package google-this
     :diminish
-    :bind-keymap ("C-c s" . google-this-mode-submap)
+    :bind-keymap ("C-c s g" . google-this-mode-submap)
     :hook
     (after-init . google-this-mode))
 #+END_SRC
@@ -1508,17 +1618,166 @@ Writable grep buffer and apply the changes to files
   (use-package magit)
 #+END_SRC
 
+* Security
+** local directory
+#+BEGIN_SRC emacs-lisp
+  ;; Both are builtin
+  (require 'cc-mode)
+  (require 'semantic)
+  (require 'semantic/bovine/gcc)
+
+  (defvar-local y/project-type nil
+    "Current project type. Candidates are linux-kernel, nil")
+  (defvar y/project--last-dir-local nil)
+  (defvar y/project--buffer-changed nil)
+
+  (defvar y/semantic-c-system-include-path nil
+    "Default system include path for C.")
+
+  (defvar y/semantic-c++-system-include-path nil
+    "Default system include path for C++.")
+
+  (defun y/semantic-set-default-include-path()
+    "Set to default include path because dir-locals may changed it unexpectedly."
+    (interactive)
+    (setq-mode-local c-mode semantic-dependency-system-include-path
+                     y/semantic-c-system-include-path)
+    (setq-mode-local c++-mode semantic-dependency-system-include-path
+                     y/semantic-c++-system-include-path))
+
+  (defun y/semantic-refresh-system-include-path()
+    "Refresh system include path. Almost you need not call directly."
+    (interactive)
+    (setq y/semantic-c-system-include-path
+          (semantic-gcc-get-include-paths "c")
+          y/semantic-c++-system-include-path
+          (semantic-gcc-get-include-paths "c++")))
+
+  (y/semantic-refresh-system-include-path)
+
+  (defun y/project-set-default()
+    "Set project to default."
+    (y/semantic-set-default-include-path)
+    ;; Always add current directory to c-dependency-include-path
+    (let ((dl (locate-dominating-file default-directory
+                                      dir-locals-file)))
+      ;; (make-local-variable 'semantic-c-dependency-system-include-path)
+      (setq dl `(,dl))
+      (setq semantic-c-dependency-system-include-path dl)
+      (setq semanticdb-project-roots dl)
+      (setq-mode-local c-mode semantic-dependency-include-path dl)
+      (setq-mode-local c++-mode semantic-dependency-include-path dl)
+
+      ;; set c++ for c/c++ both
+      (if (string= major-mode "c-mode")
+          (setq dl (append dl y/semantic-c-system-include-path))
+        (setq dl (append dl y/semantic-c++-system-include-path)))
+      (setq flycheck-clang-include-path dl
+            flycheck-clang-includes dl
+            flycheck-gcc-include-path dl
+            company-c-headers-path-system dl)))
+
+  (defun y/whitespace-linux-kernel-style()
+    "Linux kernel do not show tab color."
+    (interactive)
+    (when (and (equal y/project-type 'linux-kernel)
+               (string= major-mode "c-mode"))
+      (make-local-variable 'whitespace-display-mappings)
+      (make-local-variable 'whitespace-style)
+      (setq whitespace-display-mappings
+            '((space-mark 32 [183] [46])
+              (newline-mark 10 [182 10])))
+      (setq whitespace-style
+            '(face trailing spaces lines-tail newline
+                   space-before-tab space-before-tab::tab
+                   space-before-tab::space
+                   space-after-tab::space space-after-tab
+                   newline-mark space-mark tab-mark))
+      ;; whitespace need re-enable to valid new style
+      (whitespace-turn-off)
+      (whitespace-turn-on)))
+
+  (defun y/project-set-linux-kernel()
+    "Set project to linux kernel."
+    (interactive)
+    (setq buffer-read-only t)
+    (y/whitespace-linux-kernel-style)
+    (let (dl (dir-local (locate-dominating-file default-directory
+                                                dir-locals-file)))
+      (when (and dir-local
+                 (semantic-active-p))
+          (progn
+            (setq semanticdb-project-roots `(,dir-local))
+            (setq dl `(,(concat dir-local "include/")
+                       ,(concat dir-local "include/uapi")
+                       ,(concat dir-local "arch/x86/include/")))
+            (setq semantic-dependency-include-path dl)
+            ;; (setq semantic-c-dependency-system-include-path dl)
+            (setq-mode-local c-mode semantic-dependency-system-include-path dl)
+            ;; (setq-mode-local c-mode semantic-c-dependency-system-include-path dl)
+            (setq flycheck-clang-include-path dl
+                  flycheck-clang-includes dl
+                  flycheck-gcc-include-path dl
+                  company-c-headers-path-system dl)))))
+
+  (add-to-list 'safe-local-eval-forms '(y/project-set-linux-kernel))
+  (add-to-list 'safe-local-variable-values '(y/project-type . linux-kernel))
+  ;; (add-hook 'c-mode-common-hook
+  ;;          #'y/semantic-set-default-include-path)
+
+  ;; (put 'y/dir-local-c-include-path 'safe-local-eval-forms
+  ;;  (lambda (x) t))
+
+  (setq enable-dir-local-variables t
+        enable-remote-dir-locals t
+        enable-local-variables :safe
+        enable-local-eval t)
+
+  ;; After all, semantic-c-dependency-include-path and
+  ;; semantic-dependency-include-path not work. Always use system directory
+  ;; So always update system directory when buffer switched.
+  (defun y/project-config-hook()
+    "Change inlcude path when buffer switched."
+    (unless (or (equal y/project--buffer-changed (current-buffer))
+                (not (or (string= major-mode "c-mode")
+                         (string= major-mode "c++-mode"))))
+      ;; update buffer so next ignore for same buffer
+      (setq y/project--buffer-changed (current-buffer))
+
+      (let ((dir-local (locate-dominating-file default-directory
+                                               dir-locals-file)))
+        (unless (equal y/project--last-dir-local dir-local)
+          ;; update dir-local so next ignore
+          (setq y/project--last-dir-local dir-local)
+          ;; Do real config
+          )
+        (cond ((equal y/project-type 'linux-kernel)
+               (y/project-set-linux-kernel))
+              (t
+               (y/project-set-default))))))
+
+  (add-hook 'post-command-hook #'y/project-config-hook)
+  ;; (add-hook 'hack-local-variables-hook #'y/project-config-hook)
+  ;; (add-hook 'buffer-list-update-hook #'y/project-config-hook)
+#+END_SRC
+
+* Project
+** projectile
+#+BEGIN_SRC emacs-lisp
+  (use-package projectile)
+#+END_SRC
 * Daemon
 #+BEGIN_SRC emacs-lisp
   (defun y/daemon-tcp()
     "Configure Emacs Daemon use TCP for remote supports."
     (when (daemonp)
       (setq server-use-tcp 1)
-      (setq server-host "192.168.1.111")
-      (setq server-port 8888)
+      (setq server-host "10.101.195.100")
+      (setq server-port 9191)
       ;; must 64 chars!
       (setq server-auth-key "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYANYG")
       (message "Daemon TCP URI:%s:%d" server-host server-port)))
+  ;; (y/daemon-tcp)
 #+END_SRC
 
 * Footer

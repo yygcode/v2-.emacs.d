@@ -43,6 +43,9 @@
 ;;; Code:
 
 (setq debug-on-error nil)
+(setq byte-compile-warnings
+      '(redefine callargs obsolete noruntime cl-functions interactive-only
+        make-local mapcar constants suspicious lexical))
 
 (unless (version= emacs-version "26.1")
   (warn "NOTICE: The config just test for version 26.1"))

@@ -1,1 +1,8 @@
 Emacs Configuration for Engineer.
+
+---------
+File list
+
+init.el - entry of initialization
+config.org - main part of configuration
+cheatsheet - customize key bindings
