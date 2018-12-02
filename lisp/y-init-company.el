@@ -48,12 +48,13 @@
 
 (defun y/company-c-mode-common()
   "Config company hook for C/C++."
-  (setq company-backends '((company-semantic
-                            company-c-headers
+  (setq company-backends '(company-c-headers
+                           (company-semantic
                             company-keywords
                             company-yasnippet)
                            ;; Outer group for performance
-                           company-gtags)
+                           company-gtags
+                           )
         company-idle-delay 5))
 
 (defun y/company-hook()
@@ -95,7 +96,7 @@
   :custom-face
   (company-tooltip ((t (:foreground "orange1"))))
   :bind
-  (:map c-mode-map
+  (:map c-mode-base-map
         ("C-<return>"   . company-complete)
         ("C-<tab> s"    . company-semantic)
         ("C-<tab> g"    . company-gtags)
@@ -132,16 +133,6 @@
   "Config company hook for elisp."
   ;; Turn off
   (semantic-mode -1))
-
-(defun y/semantic-c-common()
-  "Config company hook for C/C++."
-  (setq company-backends '((company-c-headers
-                            company-keywords
-                            company-yasnippet
-                            company-semantic)
-                           ;; Outer group for performance
-                           company-gtags)
-        company-idle-delay 0.5))
 
 (defun y/semantic-hook()
   "Comelete anything hook."
