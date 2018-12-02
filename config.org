@@ -1662,16 +1662,17 @@ Writable grep buffer and apply the changes to files
     (let ((dl (locate-dominating-file default-directory
                                       dir-locals-file)))
       ;; (make-local-variable 'semantic-c-dependency-system-include-path)
-      (setq dl `(,dl))
+      (and dl (setq dl `(,dl)))
       (setq semantic-c-dependency-system-include-path dl)
       (setq semanticdb-project-roots dl)
       (setq-mode-local c-mode semantic-dependency-include-path dl)
       (setq-mode-local c++-mode semantic-dependency-include-path dl)
 
       ;; set c++ for c/c++ both
-      (if (string= major-mode "c-mode")
-          (setq dl (append dl y/semantic-c-system-include-path))
-        (setq dl (append dl y/semantic-c++-system-include-path)))
+      (when dl
+        (if (string= major-mode "c-mode")
+            (setq dl (append dl y/semantic-c-system-include-path))
+          (setq dl (append dl y/semantic-c++-system-include-path))))
       (setq flycheck-clang-include-path dl
             flycheck-clang-includes dl
             flycheck-gcc-include-path dl
