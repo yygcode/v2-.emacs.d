@@ -76,9 +76,9 @@
     (setenv env val)))
 (defun y/env-sync-partner(env1 env2)
   "Sync enviroment ENV1/ENV2 to another if one is nil and another is non-nil."
-  (or (getenv env1) (y/env-set env1 env2))
-  (or (getenv env2) (y/env-set env2 env1)))
-(y/env-sync-partner "http_proxy" "https_proxy")
+  (or (getenv env1) (y/env-set env1 (getenv env2)))
+  (or (getenv env2) (y/env-set env2 (getenv env1))))
+(y/env-sync-partner "https_proxy" "http_proxy")
 ;; set no_proxy env if empty
 (y/env-set "no_proxy" y/no-proxy-list)
 

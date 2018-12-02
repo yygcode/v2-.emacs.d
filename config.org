@@ -618,9 +618,9 @@ Customize user interface
         (progn
           ;; Only support xterm.
           ;; FIXME: restore after exit.
-          ;; need terminal support. 6 for steady bar
+          ;; need terminal support. 6 for steady bar, 2 for box
           ;; \e: ESC; \a: BELL; man ascii for more details.
-          (send-string-to-terminal "\e[6 q\e]12;DarkOrange1\a")))
+          (send-string-to-terminal "\e[2 q\e]12;DarkOrange1\a")))
 
       ;; disable bell
       (setq visible-bell nil)
