@@ -438,7 +438,11 @@ configuring a development environment such as C/C++.
     :config
     (add-to-list 'flycheck-clang-warnings "no-pragma-once-outside-header")
     :hook
-    (after-init . global-flycheck-mode))
+    (after-init    . global-flycheck-mode)
+    (flycheck-mode . (lambda()
+                       "flycheck disable clang then use gcc."
+                       (add-to-list 'flycheck-disabled-checkers
+                                    'c/c++-clang))))
 #+END_SRC
 
 Read https://www.flycheck.org/en/latest/languages.html#emacs-lisp to get more
@@ -818,12 +822,12 @@ https://emacs.stackexchange.com/a/3044.
            frame charset y/font-monocjk-name-list-x y/font-monocjk-name-list-c))))
 
   ;; daemon hook, exec after emacsclient created
-  ;; (add-hook 'after-make-frame-functions #'y/font-set)
+  (add-hook 'after-make-frame-functions #'y/font-set)
 
   ;; non-daemon hook
-  ;; (unless (daemonp)
-  ;;  (add-hook 'after-init-hook
-  ;;            #'(lambda() (y/font-set (selected-frame)))))
+  (unless (daemonp)
+    (add-hook 'after-init-hook
+              #'(lambda() (y/font-set (selected-frame)))))
 #+END_SRC
 
 ** theme
@@ -1241,9 +1245,11 @@ GNU Emacs package for showing an inline arguments hint for the C/C++ function at
     (setq sr-speedbar-auto-refresh t
           speedbar-use-images nil
           sr-speedbar-width-x 10
-          sr-speedbar-max-width 20)
+          sr-speedbar-max-width 20
+          sr-speedbar-skip-other-window-p t)
     :bind
-    ("C-c w b" . sr-speedbar-toggle))
+    ("C-c w b" . sr-speedbar-toggle)
+    ("C-c b" . sr-speedbar-select-window))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -1355,11 +1361,13 @@ Org mode is a great GTD tool.
 - Homepage: [[https://github.com/sabof/org-bullets][GitHub Org Bullets]]
 - FIXME: Win7 Ultimate CN version can not show heading bullets low than level 3
 #+BEGIN_SRC emacs-lisp
-  (when (find-font (font-spec :name "Source Code Variable" :size 15))
-    (use-package org-bullets
-      :init
-      (add-hook 'org-mode-hook
-                (lambda()(org-bullets-mode 1)))))
+  (dolist (x '("Source Code Variable" "Source Code Pro"))
+          (when (find-font (font-spec :name x :size 15))
+            (use-package org-bullets
+              :init
+              (add-hook 'org-mode-hook
+                        (lambda()(org-bullets-mode 1)))))
+          )
 #+END_SRC
 
 *** pomodoro
@@ -1545,6 +1553,23 @@ Writable grep buffer and apply the changes to files
   (use-package wgrep-ag)
 #+END_SRC
 
+** expand region
+- melpa: https://melpa.org/#/expand-region
+- github: https://github.com/magnars/expand-region.el
+#+BEGIN_SRC emacs-lisp
+  (use-package expand-region
+    :bind
+    ("C-c e w"   . er/mark-word)
+    ("C-c e s"   . er/mark-symbol)
+    ("C-c e f"   . er/mark-method-call)
+    ("C-c e i q" . er/mark-inside-quotes)
+    ("C-c e o q" . er/mark-outside-quotes)
+    ("C-c e i p" . er/mark-inside-pairs)
+    ("C-c e o p" . er/mark-outside-pairs)
+    ("C-c e i t" . er/mark-inner-tag)
+    ("C-c e p t" . er/mark-outer-tag))
+#+END_SRC
+
 * Dictionary
 ** youdao
 - Homepage: [[https://github.com/xuchunyang/youdao-dictionary.el][GitHub Youdao]]
@@ -1633,8 +1658,15 @@ Writable grep buffer and apply the changes to files
 
   (defvar-local y/project-type nil
     "Current project type. Candidates are linux-kernel, nil")
+  ;; search <header.h> from system include path, and search
+  ;; "header.h" from include path.
   (defvar-local y/project-include-path nil
     "Project additional include path.")
+  (defvar-local y/project-system-include-path nil
+    "Project additional system include path.")
+  (defvar-local y/project-tab-visible t
+    "Project source code show visible TAB or not.")
+
   (defvar y/project--buffer-changed nil
     "Project internal used to check buffer switched or not.")
 
@@ -1650,7 +1682,9 @@ Writable grep buffer and apply the changes to files
     (setq-mode-local c-mode semantic-dependency-system-include-path
                      y/semantic-c-system-include-path)
     (setq-mode-local c++-mode semantic-dependency-system-include-path
-                     y/semantic-c++-system-include-path))
+                     y/semantic-c++-system-include-path)
+    (setq-mode-local c-mode semantic-dependency-include-path nil)
+    (setq-mode-local c++-mode semantic-dependency-include-path nil))
 
   (defun y/semantic-refresh-system-include-path()
     "Refresh system include path. Almost you need not call directly."
@@ -1662,46 +1696,13 @@ Writable grep buffer and apply the changes to files
 
   (y/semantic-refresh-system-include-path)
 
-  (defun y/project-set-default()
-    "Set project to default."
-    (y/semantic-set-default-include-path)
-    ;; Always add current directory to c-dependency-include-path
-    (let ((de '())
-          (dl (locate-dominating-file default-directory
-                                      dir-locals-file)))
-
-      ;; append dl to include path if not absolute path
-      (dolist (d y/project-include-path)
-        (if (stringp d)
-            (progn
-              (or (string-prefix-p "/" d)
-                  (setq d (concat dl d)))
-              (add-to-list 'de (file-truename d)))
-          (warn "y/projects: not a string include path:" d)))
-      ;; Alwasys add root directory
-      (and dl (add-to-list 'de (file-truename dl)))
-
-      (setq semantic-c-dependency-system-include-path de)
-      (setq semanticdb-project-roots de)
-      (setq-mode-local c-mode semantic-dependency-include-path de)
-      (setq-mode-local c++-mode semantic-dependency-include-path de)
-
-      ;; set c++ for c/c++ both
-      (when de
-        (if (string= major-mode "c-mode")
-            (setq de (append de y/semantic-c-system-include-path))
-          (setq de (append de y/semantic-c++-system-include-path))))
-      (setq flycheck-clang-include-path de
-            flycheck-clang-includes de
-            flycheck-gcc-include-path de
-            company-c-headers-path-system de)))
-
-  (defun y/whitespace-linux-kernel-style()
+  (defun y/whitespace-style-tab-visible(&optional tab-visible)
     "Linux kernel do not show tab color."
     (interactive)
-    (when (and (equal y/project-type 'linux-kernel)
-               (or (string= major-mode "c-mode")
-                   (string= major-mode "c++-mode")))
+    (or tab-visible (setq tab-visible y/project-tab-visible))
+    (when (and (or (string= major-mode "c-mode")
+                   (string= major-mode "c++-mode"))
+               (not tab-visible))
       (make-local-variable 'whitespace-display-mappings)
       (make-local-variable 'whitespace-style)
       (setq whitespace-display-mappings
@@ -1717,22 +1718,80 @@ Writable grep buffer and apply the changes to files
       (whitespace-turn-off)
       (whitespace-turn-on)))
 
+  (defun y/project-set-config(&optional system-include-path-clear)
+    "Set project include path.
+
+  SYSTEM-INCLUDE-PATH nil do nothing, t clear system include path."
+
+    (let ((de '()) ;; directory external include path
+          (ds '()) ;; directory system include path
+          (dl (locate-dominating-file default-directory
+                                      dir-locals-file)))
+
+      ;; reset db root
+      (if dl
+          (setq semanticdb-project-roots `(,dl))
+        (setq semanticdb-project-roots dl))
+
+      ;; process external include path.
+      (dolist (d y/project-include-path)
+        (if (stringp d)
+            (progn
+              (or (string-prefix-p "/" d)
+                  (setq d (concat dl d)))
+              (add-to-list 'de (file-truename d) t))
+          (warn "y/projects: not a string include path:" d)))
+      ;; Alwasys append project root directory to include path
+      (and dl (add-to-list 'de (file-truename dl) t))
+      ;; (setq semantic-c-dependency-system-include-path de)
+
+      ;; process system include path.
+      (dolist (d y/project-system-include-path)
+        (if (stringp d)
+            (progn
+              (or (string-prefix-p "/" d)
+                  (setq d (concat dl d)))
+              (add-to-list 'ds (file-truename d) t))
+          (warn "y/projects: not a string system include path:" d)))
+
+      (setq-mode-local c-mode semantic-dependency-include-path ds)
+      (setq-mode-local c++-mode semantic-dependency-include-path de)
+
+      (unless system-include-path-clear
+           (if (string= major-mode "c-mode")
+               (setq ds (append y/semantic-c-system-include-path ds))
+             (setq ds (append y/semantic-c++-system-include-path ds))))
+      (setq-mode-local c-mode semantic-dependency-system-include-path ds)
+      (setq-mode-local c++-mode semantic-dependency-system-include-path ds)
+
+      ;; ds now add all ds and de assign to other tools.
+      ;; (setq ds (append ds de))
+      (setq flycheck-clang-include-path de
+            flycheck-clang-includes ds
+            flycheck-gcc-include-path de
+            flycheck-gcc-includes ds
+            company-c-headers-path-system (append de ds))
+      (when (bound-and-true-p flycheck-mode)
+        (flycheck-mode)))
+
+    (y/whitespace-style-tab-visible))
+
   (defun y/project-set-linux-kernel()
     "Set project to linux kernel."
     (interactive)
-    (message "Set to linux %s" (buffer-file-name))
-    (setq buffer-read-only t)
-    (y/whitespace-linux-kernel-style)
-    (setq y/project-include-path
-          (append y/project-include-path
-                  '("include/" "include/uapi" "arch/x86/include/")))
-    (y/project-set-default)
-    (setq-mode-local c-mode semantic-dependency-system-include-path
-                     semantic-c-dependency-system-include-path))
+    (and (string= major-mode "c++-mode")
+         (c-mode)) ;; force to c-mode for linux
+    (setq buffer-read-only t
+          y/project-tab-visible nil)
+    (setq y/project-system-include-path
+          '("include" "include/uapi" "arch/x86/include"))
+    (y/project-set-config t))
 
   (add-to-list 'safe-local-eval-forms '(y/project-set-linux-kernel))
   (add-to-list 'safe-local-variable-values '(y/project-type . linux-kernel))
   (put 'y/project-include-path 'safe-local-variable #'listp)
+  (put 'y/project-system-include-path 'safe-local-variable #'listp)
+  (put 'y/project-tab-visible 'safe-local-variable #'booleanp)
 
   (setq enable-dir-local-variables t
         enable-remote-dir-locals t
@@ -1755,7 +1814,7 @@ Writable grep buffer and apply the changes to files
         (cond ((equal y/project-type 'linux-kernel)
                (y/project-set-linux-kernel))
               (t
-               (y/project-set-default))))))
+               (y/project-set-config))))))
 
   (add-hook 'post-command-hook #'y/project-config-hook)
   ;; Follow hooks not work properly, use post-command-hook replaced.

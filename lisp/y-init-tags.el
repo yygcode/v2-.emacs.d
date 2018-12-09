@@ -52,6 +52,7 @@
         ("C-c g u" . ggtags-update-tags)))
 
 (use-package counsel-gtags
+  :diminish
   :bind
   (:map counsel-gtags-mode-map
         ("C-c g s" . counsel-gtags-find-symbol)

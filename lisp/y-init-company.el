@@ -42,32 +42,58 @@
 
 (defun y/company-elisp-hook()
   "Config company hook for elisp."
-  (local-set-key (kbd "<tab>") #'company-indent-or-complete-common)
-  (setq company-backends '(company-elisp)
+  (local-set-key "\t" #'company-indent-or-complete-common)
+  (setq company-backends '((company-elisp
+                            company-yasnippet
+                            company-files
+                            company-ispell))
         company-idle-delay 0))
+
+;; use irony if clang installed.
+(defvar y/company-backends-c-common
+  '(company-c-headers
+    company-semantic
+    company-keywords
+    company-yasnippet
+    company-gtags)
+  "Company-backends depends on compiler.")
+;; (when (executable-find "clang")
+;;   (setq y/company-backends-c-common
+;;         '(company-c-headers
+;;           company-irony
+;;           company-keywords
+;;           company-yasnippet
+;;           company-gtags)))
 
 (defun y/company-c-mode-common()
   "Config company hook for C/C++."
-  (setq company-backends '(company-c-headers
-                           (company-semantic
-                            company-keywords
-                            company-yasnippet)
-                           ;; Outer group for performance
-                           company-gtags
-                           )
-        company-idle-delay 5))
+  (setq company-backends y/company-backends-c-common
+        company-idle-delay .2))
+
+(defun y/company-text-hook()
+  "Config company hook for text."
+  (setq company-backends '((company-abbrev
+                            company-dabbrev
+                            company-files
+                            company-bbdb
+                            company-yasnippet
+                            company-ispell))
+        company-idle-delay 0.1))
 
 (defun y/company-hook()
   "Comelete anything hook."
   (make-local-variable 'company-backends)
   (make-local-variable 'company-idle-delay)
   (and company-mode ;; do nothing if nil
-       (cond ((or (equal major-mode 'emacs-lisp)
+       (cond ((or (equal major-mode 'emacs-lisp-mode)
                   (equal major-mode 'lisp-interaction-mode))
               (y/company-elisp-hook))
              ((or (equal major-mode 'c-mode)
                   (equal major-mode 'c++-mode))
-              (y/company-c-mode-common)))))
+              (y/company-c-mode-common))
+             ;; default to text mode, so add special above here.
+             (t
+              (y/company-text-hook)))))
 
 (use-package company
   :diminish
@@ -95,6 +121,8 @@
   ;; I don't know how to config face by company-frontends-set
   :custom-face
   (company-tooltip ((t (:foreground "orange1"))))
+  (company-tooltip-selection ((t (:foreground "orange1"
+                                  :background "DarkOliveGreen4"))))
   :bind
   (:map c-mode-base-map
         ("C-<return>"   . company-complete)
@@ -127,24 +155,10 @@
   :bind
   ("C-c h c" . helm-company))
 
-(require 'semantic nil t)
-
-(defun y/semantic-elisp-hook()
-  "Config company hook for elisp."
-  ;; Turn off
-  (semantic-mode -1))
-
-(defun y/semantic-hook()
-  "Comelete anything hook."
-  (make-local-variable 'company-backends)
-  (make-local-variable 'company-idle-delay)
-  (and company-mode ;; do nothing if nil
-       (cond ((or (equal major-mode 'emacs-lisp)
-                  (equal major-mode 'lisp-interaction-mode))
-              (y/semantic-elisp-hook))
-             ((or (equal major-mode 'c-mode)
-                  (equal major-mode 'c++-mode))
-              (y/company-c-mode-common)))))
+(defun y/semantic-mode()
+  "Semantic mode config if clang not exists."
+  (semantic-mode 1)
+  (semantic-default-c-setup))
 
 ;; https://www.gnu.org/software/emacs/manual/html_mono/semantic.html
 (use-package semantic
@@ -183,10 +197,41 @@
         ("C-c , c" . semantic-ia-complete-symbol)
         )
   :hook
-  (c-mode-common . (lambda()
-                     "C/C++ Semantic Hooks."
-                     (semantic-mode 1)
-                     (semantic-default-c-setup))))
+  (c-mode-common . y/semantic-mode))
+
+(use-package irony
+  :diminish
+  :config
+  (progn
+    (unless (irony--find-server-executable)
+      (call-interactively #'irony-install-server)))
+  :hook
+  (c-mode-common . irony-mode)
+  (irony-mode . irony-cdb-autosetup-compile-options))
+
+(use-package rtags
+  :init
+  (setq rtags-display-result-backend 'helm)
+  :bind
+  (:map c-mode-base-map
+   ("C-c r ." . rtags-find-symbol-at-point)
+   ("C-c r r" . rtags-find-references-at-point)
+   ("C-c r s" . rtags-display-summary)))
+
+(use-package helm-rtags)
+
+(use-package company-rtags)
+
+;; (use-package company-irony
+;;   :diminish
+;;   :hook
+;;   (irony-mode . company-irony-setup-begin-commands))
+
+;; (use-package irony-eldoc
+;;   :diminish
+;;   :pin melpa
+;;   :hook
+;;   (irony-mode . irony-eldoc))
 
 (provide 'y-init-company)
 
